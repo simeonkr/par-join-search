@@ -2,7 +2,7 @@ from terms import Const, Var, Term
 from loop import Loop
 from join import get_candidate_join_unfold_terms
 from rules import *
-from strategy import RewriteStrategy
+from strategy import RewriteStrategy, NewStrategy
 from solver import EqSolver
 from defns import *
 from util import PriorityQueue
@@ -20,7 +20,7 @@ class JoinSearchProblem:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
         self.rules = rules
-        self.strategy = RewriteStrategy(self.rules)
+        self.strategy = NewStrategy(self.rules)#RewriteStrategy(self.rules)
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
@@ -92,10 +92,31 @@ class JoinSearchProblem:
                                               'select a rewrite of %s:' % state):
                     succ_cost = succ_state.get_cost()
                     if not succ_state in seen or succ_cost < seen[succ_state]:
-                        seen[succ_state] = succ_cost
-                        open_set.push(succ_state, succ_cost)
+                        h = self.goal_heuristic(succ_state)
+                        seen[succ_state] = succ_cost + h
+                        open_set.push(succ_state, succ_cost + h)
                     self.rule_choice_record.append(i)
         return None
+
+    def goal_heuristic(self, state):
+        return 0
+        terms = 0
+        h = 0
+        tcount = 0
+        for _, uterm in loopthru(all_unflatten(state.term), I_UNFLATTEN,
+                                 'select an unflattened variant of %s' % state.term):
+
+            count = 0
+            l = len(get_candidate_join_unfold_terms(self.lp, uterm))
+            tcount += 0 if l == 0 else 1
+            for join in get_candidate_join_unfold_terms(self.lp, uterm):
+                if self.solver.equivalent(self.unfolded_term, unflatten(join.induced_term(2))): # temporarily using unflatten here
+                    count += 1
+                    if self.post_verification(join, 4): # used to be self.post_verification(join, 2)
+                        return 0
+            h += 0 if l==0 else (l-count)/l
+
+        return 100 if tcount == 0  else 2*h/tcount
 
     '''
     def verify(self, rule_sequence):
@@ -153,4 +174,3 @@ class State:
         if self.par_state is None:
             return []
         return [self.rule_num] + self.par_state.get_rule_history()
-
