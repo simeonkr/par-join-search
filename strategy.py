@@ -71,6 +71,7 @@ class NewStrategy(Strategy):
             cost += state.rule_costs[rule_num]
         cost += 5 * (max_state_depth(new_term) - max_state_depth(state.get_term()))*max_state_depth(new_term)
         cost += 5 * (max(0, new_term.length() - state.get_term().length()))
+        cost += 50 * get_duplicates(new_term)
 
         #TODO punish max(0,0), max(a0, a0), etc...
         #if get_diff(term) is not None:
@@ -133,3 +134,22 @@ def get_diff(term, new_term):
         return (None, newsubterms[0])
     else: # len(newsubterms) == 1 and len(changed) == 1: TODO o/w?
         assert len(newsubterms) == 1 and len(changed) == 1
+
+def get_duplicates(term):
+    if type(term) == Const or type(term) == Var:
+        return 0
+    return number_of_duplicates(term.terms) + sum([get_duplicates(subterm) for subterm in term.terms])
+
+def number_of_duplicates(lst):
+    l = lst[:]
+    count = 0
+    for x in lst:
+        subcount = -1
+        expcount = -1/2
+        while x in l:
+            l.remove(x)
+            subcount += 1
+            expcount = 2*expcount + 1
+        #count += max(0, subcount)
+        count += int(expcount)
+    return count
