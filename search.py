@@ -4,7 +4,7 @@ from terms import Const, Var, Term
 from loop import Loop
 from join import get_candidate_join_unfold_terms
 from rules import *
-from strategy import RewriteStrategy
+from strategy import RewriteStrategy, NewStrategy
 from solver import EqSolver
 from defns import *
 from statistics import SearchStats
@@ -23,7 +23,7 @@ class JoinSearchProblem:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
         self.rules = rules
-        self.strategy = RewriteStrategy(self.rules)
+        self.strategy = NewStrategy(self.rules)
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
