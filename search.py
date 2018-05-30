@@ -32,8 +32,7 @@ class JoinSearchProblem:
         self.benchmark_sequence = []
 
     def get_initial_state(self):
-        return State(flatten(self.init_term), 0,
-                     self.strategy.get_heuristic(None, flatten(self.init_term), None))
+        return State(flatten(self.init_term), 0, None)
 
     def get_successors(self, state):
         out = []
@@ -43,8 +42,7 @@ class JoinSearchProblem:
             new_terms = new if type(new) == list else [new]
             for new_term in new_terms:
                 new_cost = state.cost + self.strategy.get_cost(state, new_term, i)
-                heuristic = self.strategy.get_heuristic(state, new_term, i)
-                new_state = State(new_term, new_cost, heuristic, state, i)
+                new_state = State(new_term, new_cost, state, i)
                 vprint(P_SUCCESSORS, 'Rule: ', state.term, '->', new_term,
                        '(%s)' % self.rules[i], new_cost)
                 out.append(new_state)
@@ -88,7 +86,7 @@ class JoinSearchProblem:
     def search(self):
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
-        open_set.push(init_state, init_state.cost + init_state.heuristic)
+        open_set.push(init_state, init_state.cost + self.strategy.get_heuristic(init_state))
         seen = {init_state : init_state.cost}
         while not open_set.is_empty():
             state = open_set.pop()
@@ -111,7 +109,7 @@ class JoinSearchProblem:
 
             for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,
                                           'select a rewrite of %s:' % state):
-                succ_metric = succ_state.cost + succ_state.heuristic
+                succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
                     open_set.push(succ_state, succ_metric)
@@ -136,10 +134,9 @@ class JoinSearchProblem:
 
 class State:
 
-    def __init__(self, term, cost, heuristic, par_state=None, rule_num=None):
+    def __init__(self, term, cost, par_state=None, rule_num=None):
         self.term = term
         self.cost = cost
-        self.heuristic = heuristic
         self.par_state = par_state
         self.rule_num = rule_num
 
@@ -149,14 +146,13 @@ class State:
         return self.term == other.term
 
     def __lt__(self, other):
-        return self.cost + self.heuristic < other.cost + other.heuristic
+        return self.cost < other.cost
 
     def __hash__(self):
         return hash(self.term)
 
     def __str__(self):
-        return "%s %s (%s+%s)" % (self.term, self.cost + self.heuristic,
-                                    self.cost, self.heuristic)
+        return "%s %s" % (self.term, self.cost)
 
     def get_predecessors(self):
         if self.par_state is None:

@@ -10,7 +10,7 @@ class Strategy:
     def get_cost(self, state, action):
         raise NotImplementedError()
 
-    def get_heuristic(selfs, state, action):
+    def get_heuristic(self, state):
         raise NotImplementedError()
 
 
@@ -39,7 +39,7 @@ class RewriteStrategy(Strategy):
         # cost += 5 * int(sq_branching_factor(new_term))
         return cost
 
-    def get_heuristic(self, state, new_term, rule_num):
+    def get_heuristic(self, state):
         return 0
 
 
@@ -83,7 +83,7 @@ class NewStrategy(Strategy):
 
         return cost
 
-    def get_heuristic(self, state, new_term, rule_num):
+    def get_heuristic(self, state):
         return 0
         terms = 0
         h = 0
