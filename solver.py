@@ -1,7 +1,7 @@
 from z3 import *
 
 from util import vprint
-from config import P_SOLVER
+from config import P_JOIN_VERIF
 
 
 class EqSolver:
@@ -29,7 +29,7 @@ class EqSolver:
         self.s.add([eval(str(invar), {}, self.eval_dict) for invar in invars])
 
     def equivalent(self, t1, t2):
-        vprint(P_SOLVER, 'Solver: %s ?= %s' % (t1, t2))
+        vprint(P_JOIN_VERIF, 'Solver: %s ?= %s' % (t1, t2))
         self.s.push()
         self.s.add(eval(t1.get_str(True), {}, self.eval_dict) !=
                    eval(t2.get_str(True), {}, self.eval_dict))

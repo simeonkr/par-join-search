@@ -17,8 +17,10 @@ class Const:
             if type(self.value) == type(other.value):
                 return self.value < other.value
             else: return self.value # TODO: do something smarter
-        elif type(other) == Var or type(other) == Term:
+        elif type(other) == Var:
             return False
+        elif type(other) == Term:
+            return True
 
     def __hash__(self):
         return hash(self.value)
@@ -130,7 +132,7 @@ class Var(Const):
         elif type(other) == Const:
             return True
         elif type(other) == Term:
-            return False
+            return True
 
     def __hash__(self):
         return hash((self.vclass, self.name, self.index))
@@ -220,7 +222,7 @@ class Var(Const):
 unary_ops = ['~', '-']
 infix_ops = ['+', '&', '|', '=', '~=', '>', '>=']
 assoc_ops = ['+', '&', '|', 'max']
-comm_ops = ['+', '&', '|', '=', '~=']
+comm_ops = ['+', '&', '|', '=', '~=', 'max']
 
 
 class TermType():
@@ -272,7 +274,7 @@ class Term(Const):
 
     def __lt__(self, other):
         if type(other) == Const or type(other) == Var:
-            return True
+            return False
         if self.op == other.op:
             return self.terms < other.terms
         return self.op < other.op
@@ -288,11 +290,12 @@ class Term(Const):
         return self.get_str()
 
     def get_str(self, for_ev=False):
-        if self.op in unary_ops and type(self.terms[0]) != Term:
-            return self.op + self.terms[0].get_str(for_ev)
+        sorted_subterms = sorted(self.terms) if self.op in comm_ops else self.terms
+        if self.op in unary_ops and type(sorted_subterms[0]) != Term:
+            return self.op + sorted_subterms[0].get_str(for_ev)
         if self.op == '+':
-            out_str = '(' + self.terms[0].get_str(for_ev)
-            for term in self.terms[1:]:
+            out_str = '(' + sorted_subterms[0].get_str(for_ev)
+            for term in sorted_subterms[1:]:
                 out_str += term.get_str(for_ev) if type(term) == Term and term.op == '-' \
                     else '+' + term.get_str(for_ev)
             out_str += ')'
@@ -300,13 +303,15 @@ class Term(Const):
 
         # format for solver (TODO: do something cleaner)
         if for_ev and self.op == '&':
-            return 'And({},{})'.format(self.terms[0].get_str(for_ev), self.terms[1].get_str(for_ev))
+            return 'And({},{})'.format(sorted_subterms[0].get_str(for_ev),
+                                       sorted_subterms[1].get_str(for_ev))
         if for_ev and self.op == '|':
-            return 'Or({},{})'.format(self.terms[0].get_str(for_ev), self.terms[1].get_str(for_ev))
+            return 'Or({},{})'.format(sorted_subterms[0].get_str(for_ev),
+                                      sorted_subterms[1].get_str(for_ev))
 
         if self.op in infix_ops:
-            return '(' + self.op.join([term.get_str(for_ev) for term in self.terms]) + ')'
-        return self.op + '(' + ','.join([term.get_str(for_ev) for term in self.terms]) + ')'
+            return '(' + self.op.join([term.get_str(for_ev) for term in sorted_subterms]) + ')'
+        return self.op + '(' + ','.join([term.get_str(for_ev) for term in sorted_subterms]) + ')'
 
     def __repr__(self):
         return self.__str__()

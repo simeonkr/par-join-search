@@ -10,6 +10,9 @@ class Strategy:
     def get_cost(self, state, action):
         raise NotImplementedError()
 
+    def get_heuristic(selfs, state, action):
+        raise NotImplementedError()
+
 
 class RewriteStrategy(Strategy):
 
@@ -25,20 +28,23 @@ class RewriteStrategy(Strategy):
         else:
             state.rule_costs = state.par_state.rule_costs[:]
             # prevent consecutive applications of most recently used rule
-            state.rule_costs[state.rule_num] *= 2
+            # state.rule_costs[state.rule_num] *= 2
 
     def get_cost(self, state, new_term, rule_num):
         cost = 0
-        if rule_num:
+        if rule_num is not None:
             cost += state.rule_costs[rule_num]
-        # cost += 5 * state_depth(new_term)
-        cost += 5 * new_term.length()
-        # cost += 3 * int(sq_branching_factor(new_term))
+        return cost
 
+    def get_heuristic(self, state, new_term, rule_num):
+        cost = 0
+        cost += 20 * state_depth(new_term)
+        cost += 20 * new_term.length()
+        # cost += 5 * int(sq_branching_factor(new_term))
         return cost
 
 
-def state_depth(term, depth = 0):
+def state_depth(term, depth=0):
     if type(term) == Const:
         return 0
     if type(term) == Var:
@@ -50,7 +56,7 @@ def state_depth(term, depth = 0):
 def _sq_sum_of_lens(term):
     if type(term) == Const or type(term) == Var:
         return 0
-    return len(term.terms) ** 2 + sum([_sq_sum_of_lens(subterm) for
+    return len(term.terms) ** 4 + sum([_sq_sum_of_lens(subterm) for
                                        subterm in term.terms])
 
 

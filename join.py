@@ -5,7 +5,7 @@ from terms import Const, Var, Term, term_types
 from loop import Loop
 from util import powerset, all_injective
 from util import vprint
-from config import P_JOIN
+from config import P_JOIN_GEN
 
 
 class Join:
@@ -32,9 +32,9 @@ class Join:
 
 
 def get_candidate_join_unfold_terms(loop, t):
-    vprint(P_JOIN, "Join: Starting gcjut")
-    vprint(P_JOIN, "Join: loop = \n", loop)
-    vprint(P_JOIN, "Join: term = %s" % str(t))
+    vprint(P_JOIN_GEN, "Join: Starting gcjut")
+    vprint(P_JOIN_GEN, "Join: loop = \n", loop)
+    vprint(P_JOIN_GEN, "Join: term = %s" % str(t))
     return [join for join in _gcjut_rec(loop, t) if join.term.state_free("IV")]
 
 
@@ -45,11 +45,11 @@ def _gcjut_rec(loop, t):
     joins = [_gcjut_rec(loop, st) for st in t.terms]
     for j_comb in product(*joins):
         merged_join = merge(loop, t.op, j_comb)
-        vprint(P_JOIN, "Join: merged these joins:")
+        vprint(P_JOIN_GEN, "Join: merged these joins:")
         for join in j_comb:
-            vprint(P_JOIN, "Join:", join)
+            vprint(P_JOIN_GEN, "Join:", join)
         out.append(merged_join)
-        vprint(P_JOIN, "Join: candidate join (merged) =\n", merged_join)
+        vprint(P_JOIN_GEN, "Join: candidate join (merged) =\n", merged_join)
         if not merged_join.term.state_free("SV"):
             continue
 
@@ -66,7 +66,7 @@ def _gcjut_rec(loop, t):
             const_indv[const].append(ind)
 
         for const in const_indv.keys():
-            vprint(P_JOIN, "Join: const %s appears in locations %s within %s)" %
+            vprint(P_JOIN_GEN, "Join: const %s appears in locations %s within %s)" %
                    (str(const), str(const_indv[const]), str(merged_join.term)))
             for ind_set in powerset(const_indv[const]):
                 if not ind_set:
@@ -80,9 +80,9 @@ def _gcjut_rec(loop, t):
                 r = auxjn.loop.add_state(const, auxterm, k)
                 auxjn.term = Var("RSV", "s", r+1)
                 out.append(auxjn)
-                vprint(P_JOIN, "Join: new auxillary variable:")
-                vprint(P_JOIN, "Join: %s = %s" % (str(auxjn.term), str(auxterm)))
-                vprint(P_JOIN, "Join: candidate join (with auxillaries) =\n", str(auxjn))
+                vprint(P_JOIN_GEN, "Join: new auxillary variable:")
+                vprint(P_JOIN_GEN, "Join: %s = %s" % (str(auxjn.term), str(auxterm)))
+                vprint(P_JOIN_GEN, "Join: candidate join (with auxillaries) =\n", str(auxjn))
     return out
 
 
