@@ -87,7 +87,7 @@ class JoinSearchProblem:
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
         open_set.push(init_state, init_state.cost + self.strategy.get_heuristic(init_state))
-        seen = {init_state : init_state.cost}
+        seen = set([init_state])
         while not open_set.is_empty():
             state = open_set.pop()
             self.state_count += 1
@@ -98,10 +98,10 @@ class JoinSearchProblem:
             if self.benchmark_sequence: # benchmark mode
                 if str(state.term) in self.benchmark_sequence:
                     vprint(True, "### Milestone:", state, "###")
+                    if self.benchmark_sequence[-1] == str(state.term):
+                        return None
                     self.benchmark_sequence.remove(str(state.term))
                     self.hits += 1 # variable has different meaning in this case
-                if not self.benchmark_sequence:
-                    return None
             else:
                 outcome = self.outcome(state)
                 if outcome:
@@ -110,8 +110,8 @@ class JoinSearchProblem:
             for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,
                                           'select a rewrite of %s:' % state):
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
-                if not succ_state in seen or succ_metric < seen[succ_state]:
-                    seen[succ_state] = succ_metric
+                if not succ_state in seen:
+                    seen.add(succ_state)
                     open_set.push(succ_state, succ_metric)
                 self.rule_choice_record.append(i)
         return None

@@ -32,8 +32,8 @@ class RewriteStrategy(Strategy):
 
     def get_cost(self, state, new_term, rule_num):
         cost = 0
-        if rule_num is not None:
-            cost += state.rule_costs[rule_num]
+        #if rule_num is not None:
+            #cost += state.rule_costs[rule_num]
         cost += 20 * state_depth(new_term)
         cost += 20 * new_term.length()
         # cost += 5 * int(sq_branching_factor(new_term))
@@ -71,11 +71,15 @@ class NewStrategy(Strategy):
         #   Ex 3: NOTE what else?
 
         cost = 0
-        if rule_num:
-            cost += state.rule_costs[rule_num]
-        cost += 5 * (max_state_depth(new_term) - max_state_depth(state.term))*max_state_depth(new_term)
-        cost += 5 * (max(0, new_term.length() - state.term.length()))
+        #if rule_num:
+            #cost += state.rule_costs[rule_num]
+        cost += 5 * (max_state_depth(new_term) - max_state_depth(state.term)) * max_state_depth(new_term)
+        cost += 5 * max(0, new_term.length() - state.term.length())
         cost += 50 * get_duplicates(new_term)
+        cost += 10 * sum([(int(rule_num == rn))**2 for rn in state.get_rule_history()])
+        # TODO: punish invariants; e.g.,
+        #if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
+        #    cost += 100
 
         #TODO punish max(0,0), max(a0, a0), etc...
         #if get_diff(term) is not None:
@@ -179,6 +183,7 @@ def number_of_duplicates(lst):
         while x in l:
             l.remove(x)
             subcount += 1
+            # TODO: punish Consts more
             expcount = 2*expcount + 1
         #count += max(0, subcount)
         count += int(expcount)

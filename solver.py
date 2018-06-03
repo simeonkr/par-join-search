@@ -15,17 +15,17 @@ class EqSolver:
                           's3' : Int('s3'),
                           's4' : Int('s5'),
                           's5' : Int('s5'),
-                           #'a0' : Bool('a0'),
-                           #'a1' : Bool('a1'),
-                           #'a2' : Bool('a2'),
-                           #'a3' : Bool('a3'),
-                           #'a4' : Bool('a4')}
+                           'a0' : Bool('a0'),
+                           'a1' : Bool('a1'),
+                           'a2' : Bool('a2'),
+                           'a3' : Bool('a3'),
+                           'a4' : Bool('a4')}
                            #"""
-                           'a0' : Int('a0'),
-                           'a1' : Int('a1'),
-                           'a2' : Int('a2'),
-                           'a3' : Int('a3'),
-                           'a4' : Int('a4')}
+                           #'a0' : Int('a0'),
+                           #'a1' : Int('a1'),
+                           #'a2' : Int('a2'),
+                           #'a3' : Int('a3'),
+                           #'a4' : Int('a4')}
                            #"""
         self.eval_dict['max'] = lambda x,y : If(x > y, x, y)
         self.eval_dict['BC'] = lambda x,y,z : If(x, y, z)

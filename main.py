@@ -31,12 +31,12 @@ if argv[1] == 'benchmark':
             term = line.split()[0]
             jsp.benchmark_sequence.append(term)
     join = jsp.search()
-
-if join is not None:
-    print("\n### Succesfully found and verified a join ###")
-    print(join)
 else:
-    print("\n### Rule sequence did not result in success ###")
+    if join is not None:
+        print("\n### Succesfully found and verified a join ###")
+        print(join)
+    else:
+        print("\n### Rule sequence did not result in success ###")
 
 if P_STATS:
     if argv[1] != 'benchmark':
