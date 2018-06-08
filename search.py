@@ -4,14 +4,14 @@ from terms import Const, Var, Term
 from loop import Loop
 from join import get_candidate_join_unfold_terms
 from rules import *
-from strategy import RewriteStrategy, NewStrategy
+from strategy import RewriteStrategy
 from solver import EqSolver
 from defns import *
 from statistics import SearchStats
 from util import PriorityQueue
 from util import loopthru, vprint
 from config import I_REWRITE, I_UNFLATTEN, \
-    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, P_SUCCESS_PATH
+    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, P_SUCCESS_PATH, R_CHECK
 
 
 class JoinSearchProblem:
@@ -23,12 +23,12 @@ class JoinSearchProblem:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
         self.rules = rules
-        self.strategy = NewStrategy(self.rules)
+        self.stats = SearchStats()
+        self.strategy = RewriteStrategy(self.rules, self.stats)
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
         self.rule_choice_record = []
-        self.stats = SearchStats()
         self.benchmark_sequence = []
 
     def get_initial_state(self):
@@ -41,8 +41,10 @@ class JoinSearchProblem:
             new = [flatten(rew) for rew in self.rules[i].apply(state.term)] # TODO: no need to flatten if rules preserve flatness
             new_terms = new if type(new) == list else [new]
             for new_term in new_terms:
-                new_cost = state.cost + self.strategy.get_cost(state, new_term, i)
+                costs = self.strategy.get_costs(state, new_term, i)
+                new_cost = state.cost + sum(costs)
                 new_state = State(new_term, new_cost, state, i)
+                new_state.costs = costs
                 vprint(P_SUCCESSORS, 'Rule: ', state.term, '->', new_term,
                        '(%s)' % self.rules[i], new_cost)
                 out.append(new_state)
@@ -83,6 +85,13 @@ class JoinSearchProblem:
                 return False
         return True
 
+    def rewrite_check(self, state):
+        if not self.solver.equivalent(unflatten(state.term), self.init_term):
+            print("%%%Warning: Current state has term that is not equivalent to original!%%%")
+            print(state.term, [st.term for st in state.get_predecessors()])
+            print(state.rule_num)
+            input('Press Enter to continue...')
+
     def search(self):
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
@@ -95,6 +104,9 @@ class JoinSearchProblem:
             self.stats.log_state(state)
             vprint(P_STATES, "State", "[%d, %d]:" %
                    (self.state_count, self.hits), state)
+            #print(state.costs)
+            if R_CHECK:
+                self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
                 if str(state.term) in self.benchmark_sequence:
                     vprint(True, "### Milestone:", state, "###")
@@ -105,13 +117,14 @@ class JoinSearchProblem:
             else:
                 outcome = self.outcome(state)
                 if outcome:
+                    self.stats.log_state(state, True)
                     return outcome
 
             for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,
                                           'select a rewrite of %s:' % state):
-                succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen:
                     seen.add(succ_state)
+                    succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                     open_set.push(succ_state, succ_metric)
                 self.rule_choice_record.append(i)
         return None
@@ -137,6 +150,7 @@ class State:
     def __init__(self, term, cost, par_state=None, rule_num=None):
         self.term = term
         self.cost = cost
+        self.costs = []
         self.par_state = par_state
         self.rule_num = rule_num
 
