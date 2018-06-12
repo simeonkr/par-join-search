@@ -8,6 +8,7 @@ from strategy import RewriteStrategy
 from solver import EqSolver
 from defns import *
 from statistics import SearchStats
+import features
 from util import PriorityQueue
 from util import loopthru, vprint
 from config import I_REWRITE, I_UNFLATTEN, \
@@ -22,6 +23,9 @@ class JoinSearchProblem:
         if initial_subst:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
+        features.inner_term = self.init_term.__deepcopy__()
+        for i in range(lp.get_num_states()):
+            features.inner_term = features.inner_term.apply_subst(self.lp.get_state_init_subst(i))
         self.rules = rules
         self.stats = SearchStats()
         self.strategy = RewriteStrategy(self.rules, self.stats)
@@ -104,7 +108,7 @@ class JoinSearchProblem:
             self.stats.log_state(state)
             vprint(P_STATES, "State", "[%d, %d]:" %
                    (self.state_count, self.hits), state)
-            #print(state.costs)
+            print(state.costs)
             if R_CHECK:
                 self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
@@ -117,7 +121,7 @@ class JoinSearchProblem:
             else:
                 outcome = self.outcome(state)
                 if outcome:
-                    self.stats.log_state(state, True)
+                    self.stats.log_state(state)
                     return outcome
 
             for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,

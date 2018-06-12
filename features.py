@@ -2,6 +2,9 @@ from rules import *
 from terms import *
 
 
+inner_term = None
+
+
 def state_depth_diff_feature(state, new_term, rule_num):
     return (max_state_depth(new_term) - max_state_depth(state.term)) * max_state_depth(new_term)
 
@@ -32,6 +35,19 @@ def rule_history_feature(state, new_term, rule_num):
 
 def const_only_terms_diff_feature(state, new_term, rule_num):
     return num_const_only_terms(new_term)
+
+
+def term_similarity_diff_feature(state, new_term, rule_num):
+    global inner_term
+    max_new_term_similarity = 0
+    max_state_term_similarity = 0
+    for uterm in all_unflatten(new_term):
+        max_new_term_similarity = max(max_new_term_similarity,
+                                      term_inner_similarity(uterm, inner_term))
+    for uterm in all_unflatten(state.term):
+        max_state_term_similarity = max(max_state_term_similarity,
+                                      term_inner_similarity(uterm, inner_term))
+    return (1 - max_new_term_similarity) - (1 - max_state_term_similarity)
 
 
 def state_depth(term, depth=0):
@@ -143,3 +159,30 @@ def get_diff(term, new_term):
         return (None, newsubterms[0])
     else: # len(newsubterms) == 1 and len(changed) == 1: TODO o/w?
         assert len(newsubterms) == 1 and len(changed) == 1
+
+
+def term_similarity(term1, term2):
+    return 2 * term_similarity_score(term1, term2) / (term1.length() + term2.length())
+
+
+def term_similarity_score(term1, term2):
+    if type(term1) == Const or type(term1) == Var:
+        if term1 == term2:
+            return 1
+        if type(term2) == Term and term1 in term2.terms:
+            return 1 / len(term2.terms)
+        return 0
+    if type(term2) == Const or type(term2) == Var:
+        return term_similarity_score(term2, term1)
+    score = 0
+    if term1.op == term2.op:
+        score += 1
+        for sub1, sub2 in zip(sorted(term1.terms), sorted(term2.terms)):
+            score += term_similarity_score(sub1, sub2)
+    return score
+
+
+def term_inner_similarity(term, inner_term):
+    subterms = term.terms if type(term) == Term else []
+    return max([term_similarity(term, inner_term)] +
+               [term_inner_similarity(subterm, inner_term) for subterm in subterms])

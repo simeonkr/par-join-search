@@ -43,8 +43,9 @@ class RewriteStrategy(Strategy):
         costs.append(5 * sq_branching_factor_diff_feature(state, new_term, rule_num))
         costs.append(50 * num_duplicates_feature(state, new_term, rule_num))
         costs.append(30 * rule_history_feature(state, new_term, rule_num))
-        costs.append(3 * depth_diff_feature(state, new_term, rule_num))
+        #costs.append(3 * depth_diff_feature(state, new_term, rule_num))
         costs.append(1000 * const_only_terms_diff_feature(state, new_term, rule_num))
+        costs.append(int(60 * term_similarity_diff_feature(state, new_term, rule_num)))
         # TODO: punish invariants; e.g.,
         if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
            costs.append(100)
