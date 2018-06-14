@@ -1,4 +1,5 @@
 from time import time
+from queue import PriorityQueue
 
 from terms import Const, Var, Term
 from loop import Loop
@@ -9,7 +10,6 @@ from solver import EqSolver
 from defns import *
 from statistics import SearchStats
 import features
-from util import PriorityQueue
 from util import loopthru, vprint
 from config import I_REWRITE, I_UNFLATTEN, \
     P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, \
@@ -100,10 +100,10 @@ class JoinSearchProblem:
     def search(self):
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
-        open_set.push(init_state, init_state.cost + self.strategy.get_heuristic(init_state))
+        open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
         seen = {init_state : init_state.cost}
-        while not open_set.is_empty():
-            state = open_set.pop()
+        while not open_set.empty():
+            _, state = open_set.get()
             self.state_count += 1
             self.strategy.state_visit(state)
             self.stats.log_state(state)
@@ -131,7 +131,7 @@ class JoinSearchProblem:
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
-                    open_set.push(succ_state, succ_metric)
+                    open_set.put((succ_metric, succ_state))
                 self.rule_choice_record.append(i)
         return None
 
