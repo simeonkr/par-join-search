@@ -12,7 +12,9 @@ import features
 from util import PriorityQueue
 from util import loopthru, vprint
 from config import I_REWRITE, I_UNFLATTEN, \
-    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, P_SUCCESS_PATH, R_CHECK
+    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, \
+    P_COSTS, P_STATE_PATH, P_SUCCESS_PATH, \
+    R_CHECK
 
 
 class JoinSearchProblem:
@@ -23,12 +25,12 @@ class JoinSearchProblem:
         if initial_subst:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
-        features.inner_term = self.init_term.__deepcopy__()
+        self.init_raw_term = self.init_term.__deepcopy__()
         for i in range(lp.get_num_states()):
-            features.inner_term = features.inner_term.apply_subst(self.lp.get_state_init_subst(i))
+            self.init_raw_term = self.init_raw_term.apply_subst(self.lp.get_state_init_subst(i))
         self.rules = rules
         self.stats = SearchStats()
-        self.strategy = RewriteStrategy(self.rules, self.stats)
+        self.strategy = RewriteStrategy(self.rules, self.stats, self.init_raw_term)
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
@@ -45,10 +47,9 @@ class JoinSearchProblem:
             new = [flatten(rew) for rew in self.rules[i].apply(state.term)] # TODO: no need to flatten if rules preserve flatness
             new_terms = new if type(new) == list else [new]
             for new_term in new_terms:
-                costs = self.strategy.get_costs(state, new_term, i)
-                new_cost = state.cost + sum(costs)
+                new_cost, breakdown = self.strategy.get_cost(state, new_term, i)
                 new_state = State(new_term, new_cost, state, i)
-                new_state.costs = costs
+                new_state.cost_breakdown = breakdown
                 vprint(P_SUCCESSORS, 'Rule: ', state.term, '->', new_term,
                        '(%s)' % self.rules[i], new_cost)
                 out.append(new_state)
@@ -108,7 +109,8 @@ class JoinSearchProblem:
             self.stats.log_state(state)
             vprint(P_STATES, "State", "[%d, %d]:" %
                    (self.state_count, self.hits), state)
-            print(state.costs)
+            vprint(P_COSTS, 'State costs: ', ', '.join(
+                [str(cost) for cost in state.cost_breakdown]))
             if R_CHECK:
                 self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
@@ -154,7 +156,7 @@ class State:
     def __init__(self, term, cost, par_state=None, rule_num=None):
         self.term = term
         self.cost = cost
-        self.costs = []
+        self.cost_breakdown = []
         self.par_state = par_state
         self.rule_num = rule_num
 

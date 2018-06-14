@@ -17,14 +17,15 @@ class Strategy:
 
 class RewriteStrategy(Strategy):
 
-    def __init__(self, rules, stats):
+    def __init__(self, rules, stats, init_raw_term):
         self.rules = rules
         self.stats = stats
+        self.init_raw_term = init_raw_term
 
     def state_visit(self, state):
         pass
 
-    def get_costs(self, state, new_term, rule_num):
+    def _get_costs(self, state, new_term, rule_num):
 
         # TODO:
         # Make rule specific assumptions, i.e.:
@@ -45,17 +46,19 @@ class RewriteStrategy(Strategy):
         costs.append(30 * rule_history_feature(state, new_term, rule_num))
         #costs.append(3 * depth_diff_feature(state, new_term, rule_num))
         costs.append(1000 * const_only_terms_diff_feature(state, new_term, rule_num))
-        costs.append(int(60 * term_similarity_diff_feature(state, new_term, rule_num)))
+        costs.append(int(60 * term_similarity_diff_feature(
+            state, new_term, rule_num, self.init_raw_term)))
         # TODO: punish invariants; e.g.,
-        if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
-           costs.append(100)
+        #if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
+        #   costs.append(100)
 
         # TODO punish max(0,0), max(a0, a0), etc...
 
         return costs
 
     def get_cost(self, state, new_term, rule_num):
-        return sum(self.get_costs(state, new_term, rule_num))
+        costs = self._get_costs(state, new_term, rule_num)
+        return state.cost + sum(costs), costs
 
     def get_heuristic(self, state):
         '''
