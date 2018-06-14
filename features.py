@@ -38,7 +38,6 @@ def const_only_terms_diff_feature(state, new_term, rule_num):
 
 
 def term_similarity_diff_feature(state, new_term, rule_num, init_raw_term):
-    global inner_term
     max_new_term_similarity = 0
     max_state_term_similarity = 0
     for uterm in all_unflatten(new_term):

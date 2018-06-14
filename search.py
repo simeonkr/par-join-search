@@ -111,6 +111,9 @@ class JoinSearchProblem:
                    (self.state_count, self.hits), state)
             vprint(P_COSTS, 'State costs: ', ', '.join(
                 [str(cost) for cost in state.cost_breakdown]))
+            for pred in [state] + state.get_predecessors():
+                vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
+                    ['%3s' % str(cost) for cost in pred.cost_breakdown])))
             if R_CHECK:
                 self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
