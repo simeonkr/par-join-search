@@ -77,3 +77,42 @@ mbo_invars = [Term('>=', [s1, Const(0)]),
               Term('>=', [Const(1), Const(0)]),
               Term('>=', [Term('+', [s1, Const(1)]), s1])] # TODO: have a rule that covers cases like last two
 mbo_invar_rules = generate_max_invar_rules(mbo_invars)
+
+"""mtspos = Loop([Const(0), Const(0)],
+              [Term("IC",
+                        [Term(">",
+                                [ Term("+", [s1, a0]), Const(0) ]),
+                         Term("+", [s1,a0]),
+                         0 ])],
+                 Term("IC",
+                        [Term(">",
+                                [Term("+", [s1, a0]), Const(0)]),
+                         i,
+                         s2]))"""
+#mtsposinit  = IC(s1+a0 > 0, i, s2)
+#mtsposfinal in string is IC( s1<IC(0+a0>0,0+a0,0),   IC(0+a0>0, i, 0), s2)
+# i.e. IC( s1<max(0+a0, 0),   IC(0+a0>0, i, 0), s2)
+
+mps = Loop([Const(0), Const(0)],
+           [Term("+", [s1, a0]),
+            Term("max", [s2, Term("+", [s1, a0])])])
+mps_invars = [Term('>=', [s1, Const(0)]),
+              Term('>=', [s2, Const(0)]),
+              Term('>=', [s2, s1])]
+mps_invar_rules = generate_max_invar_rules(mps_invars)
+#mps init max(s2, s1+a0)
+#mps goal max(s2L, s1L + s2R) i.e. max(s2, s1 + max(0, 0+a0))
+
+"""bal = Loop([Const(0), Const(True)],
+           [Term("+", [s1, Term("IC", [a0b, Const(1), Const(-1)])]),
+           Term("&", [s2, Term(">=", [Term("+", [s1, Term("IC", [a0b, 1, -1])]), Const(0)])])])"""
+# bal init: s2 & (s1 + IC(a0b, 1, -1) >= 0)
+# bal goal: balL & countL + mincountR >= 0 (mincount is just minpresum i.e. min(mincount, count+a0))
+# i.e. bal & count + min(0,0+a0)
+
+oz = Loop([Const(True), Const(True)],
+          [Term("&", [a0b, s1]),
+           Term("&", [Term("|", [Term("~", [a0b]), Term("&", [a0b, s1])]), s2])])
+oz_invars = [Term("=", [Term("&", [a0b, Term("~", [a0b])]), Const(True)])
+            #
+            ]
