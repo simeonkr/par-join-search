@@ -147,6 +147,8 @@ class Var(Const):
         return self.name + sub + str(self.index)
 
     def get_str(self, for_ev=False):
+        if for_ev and self.type == bool:
+            return self.__str__() + 'b'
         return self.__str__()
 
     def __repr__(self):
