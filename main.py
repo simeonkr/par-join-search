@@ -30,6 +30,13 @@ def make_jsp(filename):
     return JoinSearchProblem(Loop(state_inits, state_terms), rules, invars)
 
 
+def print_join(join):
+    for state_init, state_term in zip(join.loop.state_init, join.loop.state_terms):
+        print(', '.join([str(state_init), str(state_term)]))
+    print()
+    print(join.term)
+
+
 if __name__ == '__main__':
 
     jsp = make_jsp('examples/%s.txt' % argv[2])
@@ -54,7 +61,8 @@ if __name__ == '__main__':
     else:
         if join is not None:
             print("\n### Succesfully found and verified a join ###")
-            print(join)
+            print()
+            print_join(join)
         else:
             print("\n### Rule sequence did not result in success ###")
 
