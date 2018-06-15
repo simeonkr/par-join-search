@@ -1,4 +1,5 @@
 from time import time
+from queue import PriorityQueue
 
 from terms import Const, Var, Term
 from loop import Loop
@@ -6,12 +7,13 @@ from join import get_candidate_join_unfold_terms
 from rules import *
 from strategy import RewriteStrategy
 from solver import EqSolver
-from defns import *
 from statistics import SearchStats
-from util import PriorityQueue
+import features
 from util import loopthru, vprint
 from config import I_REWRITE, I_UNFLATTEN, \
-    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, P_SUCCESS_PATH
+    P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, \
+    P_COSTS, P_STATE_PATH, P_SUCCESS_PATH, \
+    R_CHECK
 
 
 class JoinSearchProblem:
@@ -22,18 +24,20 @@ class JoinSearchProblem:
         if initial_subst:
             self.init_term = self.init_term.apply_subst(initial_subst)
         self.unfolded_term = self.init_term.apply_subst_multi(lp.get_full_state_subst(), 1)
+        self.init_raw_term = self.init_term.__deepcopy__()
+        for i in range(lp.get_num_states()):
+            self.init_raw_term = self.init_raw_term.apply_subst(self.lp.get_state_init_subst(i))
         self.rules = rules
-        self.strategy = RewriteStrategy(self.rules)
+        self.stats = SearchStats()
+        self.strategy = RewriteStrategy(self.rules, self.stats, self.init_raw_term)
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
         self.rule_choice_record = []
-        self.stats = SearchStats()
         self.benchmark_sequence = []
 
     def get_initial_state(self):
-        return State(flatten(self.init_term), 0,
-                     self.strategy.get_heuristic(None, flatten(self.init_term), None))
+        return State(flatten(self.init_term), 0, None)
 
     def get_successors(self, state):
         out = []
@@ -42,9 +46,9 @@ class JoinSearchProblem:
             new = [flatten(rew) for rew in self.rules[i].apply(state.term)] # TODO: no need to flatten if rules preserve flatness
             new_terms = new if type(new) == list else [new]
             for new_term in new_terms:
-                new_cost = state.cost + self.strategy.get_cost(state, new_term, i)
-                heuristic = self.strategy.get_heuristic(state, new_term, i)
-                new_state = State(new_term, new_cost, heuristic, state, i)
+                new_cost, breakdown = self.strategy.get_cost(state, new_term, i)
+                new_state = State(new_term, new_cost, state, i)
+                new_state.cost_breakdown = breakdown
                 vprint(P_SUCCESSORS, 'Rule: ', state.term, '->', new_term,
                        '(%s)' % self.rules[i], new_cost)
                 out.append(new_state)
@@ -85,36 +89,51 @@ class JoinSearchProblem:
                 return False
         return True
 
+    def rewrite_check(self, state):
+        if not self.solver.equivalent(unflatten(state.term), self.init_term):
+            print("%%%Warning: Current state has term that is not equivalent to original!%%%")
+            print(state.term, [st.term for st in state.get_predecessors()])
+            print(state.rule_num)
+            input('Press Enter to continue...')
+
     def search(self):
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
-        open_set.push(init_state, init_state.cost + init_state.heuristic)
+        open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
         seen = {init_state : init_state.cost}
-        while not open_set.is_empty():
-            state = open_set.pop()
+        while not open_set.empty():
+            _, state = open_set.get()
             self.state_count += 1
             self.strategy.state_visit(state)
             self.stats.log_state(state)
             vprint(P_STATES, "State", "[%d, %d]:" %
                    (self.state_count, self.hits), state)
+            vprint(P_COSTS, 'State costs: ', ', '.join(
+                [str(cost) for cost in state.cost_breakdown]))
+            for pred in [state] + state.get_predecessors():
+                vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
+                    ['%3s' % str(cost) for cost in pred.cost_breakdown])))
+            if R_CHECK:
+                self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
                 if str(state.term) in self.benchmark_sequence:
                     vprint(True, "### Milestone:", state, "###")
+                    if self.benchmark_sequence[-1] == str(state.term):
+                        return None
                     self.benchmark_sequence.remove(str(state.term))
                     self.hits += 1 # variable has different meaning in this case
-                if not self.benchmark_sequence:
-                    return None
             else:
                 outcome = self.outcome(state)
                 if outcome:
+                    self.stats.log_state(state)
                     return outcome
 
             for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,
                                           'select a rewrite of %s:' % state):
-                succ_metric = succ_state.cost + succ_state.heuristic
+                succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
-                    open_set.push(succ_state, succ_metric)
+                    open_set.put((succ_metric, succ_state))
                 self.rule_choice_record.append(i)
         return None
 
@@ -136,10 +155,10 @@ class JoinSearchProblem:
 
 class State:
 
-    def __init__(self, term, cost, heuristic, par_state=None, rule_num=None):
+    def __init__(self, term, cost, par_state=None, rule_num=None):
         self.term = term
         self.cost = cost
-        self.heuristic = heuristic
+        self.cost_breakdown = []
         self.par_state = par_state
         self.rule_num = rule_num
 
@@ -149,14 +168,13 @@ class State:
         return self.term == other.term
 
     def __lt__(self, other):
-        return self.cost + self.heuristic < other.cost + other.heuristic
+        return self.cost < other.cost
 
     def __hash__(self):
         return hash(self.term)
 
     def __str__(self):
-        return "%s %s (%s+%s)" % (self.term, self.cost + self.heuristic,
-                                    self.cost, self.heuristic)
+        return "%s %s" % (self.term, self.cost)
 
     def get_predecessors(self):
         if self.par_state is None:

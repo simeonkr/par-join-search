@@ -1,5 +1,6 @@
 from terms import *
 from rules import *
+from features import *
 
 
 class Strategy:
@@ -10,55 +11,73 @@ class Strategy:
     def get_cost(self, state, action):
         raise NotImplementedError()
 
-    def get_heuristic(selfs, state, action):
+    def get_heuristic(self, state):
         raise NotImplementedError()
 
 
 class RewriteStrategy(Strategy):
 
-    def __init__(self, rules):
+    def __init__(self, rules, stats, init_raw_term):
         self.rules = rules
+        self.stats = stats
+        self.init_raw_term = init_raw_term
 
     def state_visit(self, state):
-        if state.par_state is None:
-            # do some initalization
-            state.rule_costs = [] # these will override default costs
-            for i in range(len(self.rules)):
-                state.rule_costs.append(self.rules[i].get_cost())
-        else:
-            state.rule_costs = state.par_state.rule_costs[:]
-            # prevent consecutive applications of most recently used rule
-            # state.rule_costs[state.rule_num] *= 2
+        pass
+
+    def _get_costs(self, state, new_term, rule_num):
+
+        # TODO:
+        # Make rule specific assumptions, i.e.:
+        #   Ex 1: don't use max(0,0)  (pretty much always goes nowhere)
+        #   Things like max(s1, 0) might be more useful, and yet have the same cost!
+        #
+        #   Ex 2: Punish harshly if applying a rule very deep. In particular go for a steep
+        #           drop-off when a term has more than (say) 5 things in it.
+        #
+        #   Ex 3: NOTE what else?
+
+        costs = []
+        costs.append(5 * state_depth_diff_feature(state, new_term, rule_num))
+        costs.append(5 * state_count_diff_feature(state, new_term, rule_num))
+        costs.append(5 * term_length_diff_feature(state, new_term, rule_num))
+        costs.append(5 * sq_branching_factor_diff_feature(state, new_term, rule_num))
+        costs.append(50 * num_duplicates_feature(state, new_term, rule_num))
+        costs.append(30 * rule_history_feature(state, new_term, rule_num))
+        #costs.append(3 * depth_diff_feature(state, new_term, rule_num))
+        costs.append(1000 * const_only_terms_diff_feature(state, new_term, rule_num))
+        costs.append(int(60 * term_similarity_diff_feature(
+            state, new_term, rule_num, self.init_raw_term)))
+        # TODO: punish invariants; e.g.,
+        #if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
+        #   costs.append(100)
+
+        # TODO punish max(0,0), max(a0, a0), etc...
+
+        return costs
 
     def get_cost(self, state, new_term, rule_num):
-        cost = 0
-        if rule_num is not None:
-            cost += state.rule_costs[rule_num]
-        return cost
+        costs = self._get_costs(state, new_term, rule_num)
+        return state.cost + sum(costs), costs
 
-    def get_heuristic(self, state, new_term, rule_num):
-        cost = 0
-        cost += 20 * state_depth(new_term)
-        cost += 20 * new_term.length()
-        # cost += 5 * int(sq_branching_factor(new_term))
-        return cost
+    def get_heuristic(self, state):
+        '''
+        terms = 0
+        h = 0
+        tcount = 0
+        for _, uterm in loopthru(all_unflatten(state.term), I_UNFLATTEN,
+                                 'select an unflattened variant of %s' % state.term):
 
+            count = 0
+            l = len(get_candidate_join_unfold_terms(self.lp, uterm))
+            tcount += 0 if l == 0 else 1
+            for join in get_candidate_join_unfold_terms(self.lp, uterm):
+                if self.solver.equivalent(self.unfolded_term, unflatten(join.induced_term(2))): # temporarily using unflatten here
+                    count += 1
+                    if self.post_verification(join, 4): # used to be self.post_verification(join, 2)
+                        return 0
+            h += 0 if l==0 else (l-count)/l
 
-def state_depth(term, depth=0):
-    if type(term) == Const:
+        return 100 if tcount == 0  else 2*h/tcount
+        '''
         return 0
-    if type(term) == Var:
-        return depth if term.vclass == "SV" else 0
-    return sum([state_depth(subterm, depth + 1) for
-                subterm in term.terms])
-
-
-def _sq_sum_of_lens(term):
-    if type(term) == Const or type(term) == Var:
-        return 0
-    return len(term.terms) ** 4 + sum([_sq_sum_of_lens(subterm) for
-                                       subterm in term.terms])
-
-
-def sq_branching_factor(term):
-    return _sq_sum_of_lens(term) / term.length()

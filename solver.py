@@ -19,13 +19,19 @@ class EqSolver:
                           'a1' : Int('a1'),
                           'a2' : Int('a2'),
                           'a3' : Int('a3'),
-                          'a4' : Int('a4')}
+                          'a4' : Int('a4'),
+                          'a0b': Bool('a0'),
+                          'a1b': Bool('a1'),
+                          'a2b': Bool('a2'),
+                          'a3b': Bool('a3'),
+                          'a4b': Bool('a4')
+                          }
         self.eval_dict['max'] = lambda x,y : If(x > y, x, y)
         self.eval_dict['BC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['IC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['And'] = lambda x,y : And(x, y)
         self.eval_dict['Or'] = lambda x,y : Or(x,y)
-        
+
         self.s.add([eval(str(invar), {}, self.eval_dict) for invar in invars])
 
     def equivalent(self, t1, t2):

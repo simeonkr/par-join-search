@@ -38,12 +38,13 @@ class SearchStats:
             print("(from state %s)" % join.state)
 
     def print_summary(self):
-        print()
-        print("Total states encountered: %d" % self.num_states)
-        print()
-        self.print_worst_states(100)
-        print()
-        self.print_worst_joins(100)
+        # print()
+        # print("Total states encountered: %d" % self.num_states)
+        # print()
+        # self.print_worst_states(100)
+        # print()
+        # self.print_worst_joins(100)
+        pass
 
     def print_benchmark_summary(self):
         pass

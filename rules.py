@@ -259,9 +259,11 @@ class DistOutRule(Rule): # TODO: case when over_term is left with a single varia
                         other_terms = []
                         for i in range(len(term.terms)):
                             if i in ct[r_term]:
-                                paired_terms.extend([subterm.__deepcopy__() for
-                                                     subterm in term.terms[i].terms])
-                                paired_terms.remove(r_term)
+                                p_term = term.terms[i].__deepcopy__()
+                                p_term.terms.remove(r_term)
+                                if len(p_term.terms) == 1:
+                                    p_term = p_term.terms[0]
+                                paired_terms.append(p_term)
                             else:
                                 other_terms.append(term.terms[i].__deepcopy__())
                         t_term = Term(dist_op, [r_term, Term(term.op, paired_terms)])
