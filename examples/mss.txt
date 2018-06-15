@@ -1,0 +1,8 @@
+0, max(a0,(s1+a0))
+0, max(s2,max(a0,(s1+a0)))
+
+max_sum_rules
+
+(s1>=0)
+(s2>=0)
+(s2>=s1)

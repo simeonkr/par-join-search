@@ -42,31 +42,3 @@ def generate_max_invar_rules(invars):
         rules.append(MaxStrengthenRule(60, invar))
         rules.append(MaxWeakenRule(60, invar))
     return rules
-
-
-mts = Loop([parse('0')], [parse('max(0,(s1+a0))')])
-mts_invars = [parse('(s1>=0)')]
-mts_invar_rules = generate_max_invar_rules(mts_invars)
-mts_jsp = JoinSearchProblem(mts, max_sum_rules + mts_invar_rules, mts_invars)
-
-
-mss = Loop([parse('0'), parse('0')],
-           [parse('max(a0,(s1+a0))'),
-            parse('max(s2,max(a0,(s1+a0)))')])
-mss_invars = [parse('(s1>=0)'),
-              parse('(s2>=0)'),
-              parse('(s2>=s1)')]
-mss_invar_rules = generate_max_invar_rules(mss_invars)
-mss_jsp = JoinSearchProblem(mss, max_sum_rules + mss_invar_rules, mss_invars)
-
-
-mbo = Loop([parse('0'), parse('0')],
-           [parse('IC(a0,(s1+1),0)'),
-            parse('max(s2,IC(a0,(s1+1),0))')])
-mbo_invars = [parse('(s1>=0)'),
-              parse('(s2>=0)'),
-              parse('(s2>=s1)'),
-              parse('(1>=0)'),
-              parse('((s1+1)>=s1)')] # TODO: have a rule that covers cases like last two
-mbo_invar_rules = generate_max_invar_rules(mbo_invars)
-mbo_jsp = JoinSearchProblem(mbo, cond_max_rules + mbo_invar_rules, mbo_invars)
