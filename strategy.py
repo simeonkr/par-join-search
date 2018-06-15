@@ -75,7 +75,7 @@ class NewStrategy(Strategy):
             cost += state.rule_costs[rule_num]
         cost += 5 * (max_state_depth(new_term) - max_state_depth(state.term))*max_state_depth(new_term)
         cost += 5 * (max(0, new_term.length() - state.term.length()))
-        cost += 50 * get_duplicates(new_term)
+        cost += 10000 * get_duplicates(new_term)
 
         #TODO punish max(0,0), max(a0, a0), etc...
         #if get_diff(term) is not None:
@@ -183,3 +183,24 @@ def number_of_duplicates(lst):
         #count += max(0, subcount)
         count += int(expcount)
     return count
+
+#TODO test me
+# Should return "how deep" a rule was applied.
+# Probably should only be used for certain type of rules
+def rule_depth(term1, term2, debug=0):
+
+    if type(term1) == Const or type(term1) == Var:
+        return 0 if term1 == term2 else 1
+    if type(term2) == Const or type(term2) == Var:
+        return 1
+
+    #type(term) = Term and type(new_term) = Term
+    if term1.op == term2.op:
+        print(term1.op) if debug else 0
+        diff = set(term1.terms).symmetric_difference(set(term2.terms))
+        print(diff) if debug else 0
+        if len(diff) == 2:
+            return 1 + rule_depth(*diff)
+        if len(diff) == 1:
+            return 2
+    return 0 if term1 == term2 else 1

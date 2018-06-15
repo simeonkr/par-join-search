@@ -10,28 +10,31 @@ class EqSolver:
         self.s = Solver()
 
         # TODO: specify types of variables properly
-        self.eval_dict = {'s1' : Int('s1'),
-                          's2' : Int('s2'),
+        self.eval_dict = {#'s1' : Int('s1'),
+                          #'s2' : Int('s2'),
                           's3' : Int('s3'),
                           's4' : Int('s5'),
                           's5' : Int('s5'),
-                           #'a0' : Bool('a0'),
-                           #'a1' : Bool('a1'),
-                           #'a2' : Bool('a2'),
-                           #'a3' : Bool('a3'),
-                           #'a4' : Bool('a4')}
+                          's1' : Bool('s1'),
+                          's2' : Bool('s2'),
+                           'a0' : Bool('a0'),
+                           'a1' : Bool('a1'),
+                           'a2' : Bool('a2'),
+                           'a3' : Bool('a3'),
+                           'a4' : Bool('a4')}
                            #"""
-                           'a0' : Int('a0'),
-                           'a1' : Int('a1'),
-                           'a2' : Int('a2'),
-                           'a3' : Int('a3'),
-                           'a4' : Int('a4')}
+                           #'a0' : Int('a0'),
+                           #'a1' : Int('a1'),
+                           #'a2' : Int('a2'),
+                           #'a3' : Int('a3'),
+                           #'a4' : Int('a4')}
                            #"""
         self.eval_dict['max'] = lambda x,y : If(x > y, x, y)
         self.eval_dict['BC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['IC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['And'] = lambda x,y : And(x, y)
         self.eval_dict['Or'] = lambda x,y : Or(x,y)
+        self.eval_dict['Not'] = lambda x: Not(x)
 
         self.s.add([eval(str(invar), {}, self.eval_dict) for invar in invars])
 

@@ -48,8 +48,6 @@ oz
 s2 & (~a0b || (s1 & a0b))
 s2 & ((~a0b||s1) & (~a0b||a0b)))
 s2 & (~a0b||s1) & True)
-s2 & (~a0b || s1)
-s2 & (s1 || True&~a0b)
 s2 & True & (s1 || True&~a0b)
 s2 & (a0b||~a0b) & (s1 || True&~a0b)
 s2 & (~a0b || (True & a0b)) & (s1 || True&~a0b)

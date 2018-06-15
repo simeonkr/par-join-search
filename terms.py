@@ -248,7 +248,7 @@ term_types['&'] = TermType(bool, bool)
 term_types['|'] = TermType(bool, bool)
 term_types['BC'] = TermType([bool, bool, bool], bool, False)
 term_types['IC'] = TermType([bool, int, int], int, False)
-
+term_types['~'] = TermType([bool], bool, False)
 
 class Term(Const):
 
@@ -291,7 +291,7 @@ class Term(Const):
 
     def get_str(self, for_ev=False):
         sorted_subterms = sorted(self.terms) if self.op in comm_ops else self.terms
-        if self.op in unary_ops and type(sorted_subterms[0]) != Term:
+        if self.op in unary_ops and self.op != '~' and type(sorted_subterms[0]) != Term:
             return self.op + sorted_subterms[0].get_str(for_ev)
         if self.op == '+':
             out_str = '(' + sorted_subterms[0].get_str(for_ev)
@@ -308,6 +308,8 @@ class Term(Const):
         if for_ev and self.op == '|':
             return 'Or({},{})'.format(sorted_subterms[0].get_str(for_ev),
                                       sorted_subterms[1].get_str(for_ev))
+        if for_ev and self.op == '~':
+            return 'Not({})'.format(sorted_subterms[0].get_str(for_ev))
 
         if self.op in infix_ops:
             return '(' + self.op.join([term.get_str(for_ev) for term in sorted_subterms]) + ')'
@@ -352,7 +354,7 @@ class Term(Const):
         elif len(index) > 1:
             self.terms[index[0]].set_term_at(index[1:], term)
 
-    # finds only first occurence            
+    # finds only first occurence
     def get_subterm_index(self, subterm):
         if self == subterm:
             return []

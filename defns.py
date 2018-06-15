@@ -10,6 +10,8 @@ a1 = Var("IV", "a", 1, int)
 a2 = Var("IV", "a", 2, int)
 a3 = Var("IV", "a", 3, int)
 a4 = Var("IV", "a", 4, int)
+s1b = Var("SV", "s", 1, bool)
+s2b = Var("SV", "s", 2, bool)
 a0b = Var("IV", "a", 0, bool)
 a1b = Var("IV", "a", 1, bool)
 a2b = Var("IV", "a", 2, bool)
@@ -40,6 +42,8 @@ bCondDistRevRule = DistOutRule(1, ['&', '|'], ['BC'], [1,2])
 iCondDistRule = DistInRule(20, ['+', 'max'], ['IC'], [1,2])
 iCondDistRevRule = DistOutRule(1, ['+', 'max'], ['IC'], [1,2])
 
+# NOTE: this rule needs to know the variables of the problem.
+boolAxioms = BooleanAxioms(40, [s1b, s2b, a0b])
 
 max_sum_rules = [maxDistRule, maxDistRevRule, maxIntroduceRule,
                  maxElimRule, zeroIntroduceRule, zeroElimRule]
@@ -111,8 +115,8 @@ mps_invar_rules = generate_max_invar_rules(mps_invars)
 # i.e. bal & count + min(0,0+a0)
 
 oz = Loop([Const(True), Const(True)],
-          [Term("&", [a0b, s1]),
-           Term("&", [Term("|", [Term("~", [a0b]), Term("&", [a0b, s1])]), s2])])
-oz_invars = [Term("=", [Term("&", [a0b, Term("~", [a0b])]), Const(True)])
-            #
+          [Term("&", [a0b, s1b]),
+           Term("&", [Term("|", [Term("~", [a0b]), Term("&", [a0b, s1b])]), s2b])])
+oz_invars = [
             ]
+oz_invar_rules = generate_max_invar_rules(oz_invars)
