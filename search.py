@@ -7,7 +7,6 @@ from join import get_candidate_join_unfold_terms
 from rules import *
 from strategy import RewriteStrategy
 from solver import EqSolver
-from defns import *
 from statistics import SearchStats
 import features
 from util import loopthru, vprint

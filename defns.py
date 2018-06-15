@@ -1,20 +1,8 @@
 from terms import Const, Var, Term
 from loop import Loop
 from rules import *
-
-
-s1 = Var("SV", "s", 1, int)
-s2 = Var("SV", "s", 2, int)
-a0 = Var("IV", "a", 0, int)
-a1 = Var("IV", "a", 1, int)
-a2 = Var("IV", "a", 2, int)
-a3 = Var("IV", "a", 3, int)
-a4 = Var("IV", "a", 4, int)
-a0b = Var("IV", "a", 0, bool)
-a1b = Var("IV", "a", 1, bool)
-a2b = Var("IV", "a", 2, bool)
-a3b = Var("IV", "a", 3, bool)
-a4b = Var("IV", "a", 4, bool)
+from search import JoinSearchProblem
+from parser import parse
 
 
 flattenRule = Rule(0, flatten)
@@ -56,24 +44,29 @@ def generate_max_invar_rules(invars):
     return rules
 
 
-mts = Loop([Const(0)], [Term("max", [Term("+", [s1, a0]), Const(0)])])
-mts_invars = [Term('>=', [s1, Const(0)])]
+mts = Loop([parse('0')], [parse('max(0,(s1+a0))')])
+mts_invars = [parse('(s1>=0)')]
 mts_invar_rules = generate_max_invar_rules(mts_invars)
+mts_jsp = JoinSearchProblem(mts, max_sum_rules + mts_invar_rules, mts_invars)
 
-mss = Loop([Const(0), Const(0)],
-           [Term("max", [Term("+", [s1, a0]), a0]),
-            Term("max", [s2, Term("max", [Term("+", [s1, a0]), a0])])])
-mss_invars = [Term('>=', [s1, Const(0)]),
-              Term('>=', [s2, Const(0)]),
-              Term('>=', [s2, s1])]
+
+mss = Loop([parse('0'), parse('0')],
+           [parse('max(a0,(s1+a0))'),
+            parse('max(s2,max(a0,(s1+a0)))')])
+mss_invars = [parse('(s1>=0)'),
+              parse('(s2>=0)'),
+              parse('(s2>=s1)')]
 mss_invar_rules = generate_max_invar_rules(mss_invars)
+mss_jsp = JoinSearchProblem(mss, max_sum_rules + mss_invar_rules, mss_invars)
 
-mbo = Loop([Const(0), Const(0)],
-           [Term("IC", [a0b, Term("+", [s1, Const(1)]), Const(0)]),
-            Term("max", [s2, Term("IC", [a0b, Term("+", [s1, Const(1)]), Const(0)])])])
-mbo_invars = [Term('>=', [s1, Const(0)]),
-              Term('>=', [s2, Const(0)]),
-              Term('>=', [s2, s1]),
-              Term('>=', [Const(1), Const(0)]),
-              Term('>=', [Term('+', [s1, Const(1)]), s1])] # TODO: have a rule that covers cases like last two
+
+mbo = Loop([parse('0'), parse('0')],
+           [parse('IC(a0,(s1+1),0)'),
+            parse('max(s2,IC(a0,(s1+1),0))')])
+mbo_invars = [parse('(s1>=0)'),
+              parse('(s2>=0)'),
+              parse('(s2>=s1)'),
+              parse('(1>=0)'),
+              parse('((s1+1)>=s1)')] # TODO: have a rule that covers cases like last two
 mbo_invar_rules = generate_max_invar_rules(mbo_invars)
+mbo_jsp = JoinSearchProblem(mbo, cond_max_rules + mbo_invar_rules, mbo_invars)

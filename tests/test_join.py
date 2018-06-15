@@ -3,6 +3,8 @@ from loop import *
 import unittest
 
 
+# TODO: use parser to define terms below
+
 s1 = Var("SV", "s", 1, int)
 s2 = Var("SV", "s", 2, int)
 s3 = Var("SV", "s", 3, int)

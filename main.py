@@ -2,15 +2,7 @@ from sys import argv, exit, stdin
 from signal import signal, SIGINT, SIGALRM, alarm
 
 from defns import *
-from search import *
-from loop import *
-from join import *
-from rules import *
 from config import P_STATS
-
-mts_jsp = JoinSearchProblem(mts, max_sum_rules + mts_invar_rules, mts_invars)
-mss_jsp = JoinSearchProblem(mss, max_sum_rules + mss_invar_rules, mss_invars)
-mbo_jsp = JoinSearchProblem(mbo, cond_max_rules + mbo_invar_rules, mbo_invars)
 
 jsp = globals()['%s_jsp' % argv[2]]
 
