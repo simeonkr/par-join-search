@@ -19,7 +19,7 @@ def make_jsp(filename):
                 blank_lines += 1
             else:
                 if blank_lines == 0: # read in ex. definition
-                    state_init, state_term = line.split(', ')
+                    state_init, state_term = line.split('; ')
                     state_inits.append(parse(state_init))
                     state_terms.append(parse(state_term))
                 elif blank_lines == 1: # read in rules
