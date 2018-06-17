@@ -3,7 +3,7 @@ from lark import Lark, InlineTransformer
 
 
 term_grammar = """
-    const: INT | "True" | "False"
+    !const: INT | "True" | "False"
     var: LETTER INT
     !op: {}
     term: const | var | prefix_term | infix_term

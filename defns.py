@@ -32,8 +32,10 @@ iCondDistRevRule = DistOutRule(1, ['+', 'max'], ['IC'], [1,2])
 max_sum_rules = [maxDistRule, maxDistRevRule, maxIntroduceRule,
                  maxElimRule, zeroIntroduceRule, zeroElimRule]
 
-cond_max_rules = max_sum_rules + [andIntroduceRule, andElimRule,
-                                  iCondDistRule, iCondDistRevRule]
+bool_rules = [andIntroduceRule, andElimRule,
+              iCondDistRule, iCondDistRevRule]
+
+cond_max_rules = max_sum_rules + bool_rules
 
 
 def generate_max_invar_rules(invars):

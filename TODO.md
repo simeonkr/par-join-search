@@ -6,6 +6,13 @@
    (On mps, the final join has a duplicate state varable.)  
    Make sure the test in `test_join` passes after making modifications.
    
+### Examples
+
+* 1s0s (match 1\*0\*)
+* bal (balanced parentheses)
+* pos_mts (positional variant of mts)
+* pos_mss (positional variant of mss)
+   
 ### Heuristics
 
 * Add better tools for evaluating heuristics (more verbosity flags and better statistics).
@@ -26,7 +33,7 @@
    
 ### General
 
-* Add more examples.
+* Better parsing for unary ops.
 * Add README documentation and make user-friendly.
 * Restructure files if necessary.
 * Implement cycle-checking in interative mode. (not a priority)

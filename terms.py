@@ -29,10 +29,12 @@ class Const:
         return Const(self.value)
 
     def __str__(self):
-        return str(self.value)
+        return self.get_str()
 
     def get_str(self, for_ev=False):
-        return self.__str__()
+        if not for_ev and isinstance(self.value, bool):
+            return str(self.value)[0]
+        return str(self.value)
 
     def __repr__(self):
         return self.__str__()
