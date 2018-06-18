@@ -1,5 +1,5 @@
-0, max(a0,(s1+a0))
-0, max(s2,max(a0,(s1+a0)))
+0; max(a0,(s1+a0))
+0; max(s2,max(a0,(s1+a0)))
 
 max_sum_rules
 
