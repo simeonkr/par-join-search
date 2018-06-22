@@ -96,10 +96,10 @@ class Const:
     def demaxify(self):
         return Const(self.value)
 
-    '''
     def negate(self):
         return Const(False) if self.value == True else Const(True)
 
+    '''
     def minus(self):
         return Const(-self.value);
 
@@ -211,6 +211,9 @@ class Var(Const):
     def demaxify(self):
         return self.__deepcopy__()
 
+    def negate(self):
+        return Term('~', [self.__deepcopy__()])
+
     '''
     def negate(self):
         return Term('~', [self.__deepcopy__()])
@@ -248,11 +251,13 @@ class TermType():
 
 term_types = {}
 term_types['+'] = TermType(int, int)
+term_types['-'] = TermType([int], int, False)
 term_types['>'] = TermType([int, int], int, False)
 term_types['>='] = TermType([int, int], int, False)
 term_types['max'] = TermType(int, int)
 term_types['&'] = TermType(bool, bool)
 term_types['|'] = TermType(bool, bool)
+term_types['~'] = TermType([bool], bool, False)
 term_types['BC'] = TermType([bool, bool, bool], bool, False)
 term_types['IC'] = TermType([bool, int, int], int, False)
 
@@ -298,6 +303,8 @@ class Term(Const):
 
     def get_str(self, for_ev=False):
         sorted_subterms = sorted(self.terms) if self.op in comm_ops else self.terms
+        if for_ev and self.op == '~':
+            return 'Not({})'.format(sorted_subterms[0].get_str(for_ev))
         if self.op in unary_ops and type(sorted_subterms[0]) != Term:
             return self.op + sorted_subterms[0].get_str(for_ev)
         if self.op == '+':
@@ -429,6 +436,11 @@ class Term(Const):
             return Term('C', [Term('<=', [new_terms[0], new_terms[1]]), new_terms[0], new_terms[1]])
         else:
             return Term(self.op, new_terms)
+
+    def negate(self):
+        if self.op == '~': # TODO: maybe not the place to do this as this should be a syntactic operation
+            return self.terms[0].__deepcopy__()
+        return Term('~', [self.__deepcopy__()])
 
     '''
     # defined for conditional-free terms only
