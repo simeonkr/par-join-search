@@ -12,6 +12,11 @@
 * bal (balanced parentheses)
 * pos_mts (positional variant of mts)
 * pos_mss (positional variant of mss)
+
+### Rules
+
+* Make sure boolean intro rules are general enough.
+* Implement double negation rule.
    
 ### Heuristics
 
@@ -22,6 +27,7 @@
 * More heuristics based on path as a whole (instead of the latest term)
     * An introduced symbol should not later be eliminated. 
       (More generally, apply rules that operate on different symbols.)
+* Heuristics based on total counts of a variable
 * Long-term goal: find a systematic way to parametrize and optimize heuristics (without overfitting).
   If optimization by trial-and-error fails, may have to resort to machine learning methods.
    

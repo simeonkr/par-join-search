@@ -53,7 +53,7 @@ if __name__ == '__main__':
     if argv[1] == 'benchmark':
         signal(SIGINT, lambda sig, frame: [jsp.stats.print_benchmark_summary(),
                                            exit(0)])
-        with open(argv[3]) as seq_file:
+        with open('examples/' + argv[3]) as seq_file:
             for line in seq_file:
                 term = line.split()[0]
                 jsp.benchmark_sequence.append(term)

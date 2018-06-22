@@ -77,7 +77,6 @@ class IdentIntroRule(Rule):
                 new_term.terms.append(self.id)
                 out.append(new_term)
         return out + self.recurse_apply(term)
-        
     
 class IdentElimRule(Rule):
     
@@ -98,25 +97,53 @@ class IdentElimRule(Rule):
                         new_term = new_term.terms[0]
                     out.append(new_term)     
         return out + self.recurse_apply(term)
-    
-    
-class InvElimRule(Rule):
 
-    def __init__(self, cost, op, inv_funct, id):
+
+class InvIntroRule(Rule):
+
+    def __init__(self, cost, op, inv_func, id, vars):
         super().__init__(cost)
         self.op = op
-        self.inv_funct = inv_funct
+        self.inv_func = inv_func
+        self.id = id
+        self.vars = vars
+
+    def apply(self, term):
+        out = []
+        if term == self.id:
+            for var in self.vars:
+                out.append(Term(self.op, [var.__deepcopy__(), self.inv_func(var)]))
+        if type(term) == Term and term.op == self.op:
+            if self.id in term.terms:
+                for var in self.vars:
+                    new_term = term.__deepcopy__()
+                    new_term.terms.remove(self.id)
+                    new_term.terms.append(var.__deepcopy__())
+                    new_term.terms.append(self.inv_func(var))
+                    out.append(new_term)
+        return out + self.recurse_apply(term)
+
+
+class InvElimRule(Rule):
+
+    def __init__(self, cost, op, inv_func, id):
+        super().__init__(cost)
+        self.op = op
+        self.inv_func = inv_func
         self.id = id
         
     def apply(self, term):
         out = []
         if type(term) == Term and term.op == self.op:
             for subterm in set(term.terms):
-                if self.inv_funct(subterm) in term.terms:
+                if subterm in term.terms and self.inv_func(subterm) in term.terms:
                     new_term = term.__deepcopy__()
                     new_term.terms.remove(subterm)
-                    new_term.terms.remove(self.inv_funct(subterm))
+                    new_term.terms.remove(self.inv_func(subterm))
                     new_term.terms.append(self.id)
+                    if len(new_term.terms) == 1:
+                        new_term = new_term.terms[0]
+                    out.append(new_term)
         return out + self.recurse_apply(term)
         
         
