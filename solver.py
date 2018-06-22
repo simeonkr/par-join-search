@@ -36,6 +36,7 @@ class EqSolver:
         self.eval_dict['IC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['And'] = lambda x,y : And(x, y)
         self.eval_dict['Or'] = lambda x,y : Or(x,y)
+        self.eval_dict['Not'] = lambda x : Not(x)
 
         self.s.add([eval(str(invar), {}, self.eval_dict) for invar in invars])
 
