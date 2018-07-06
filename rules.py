@@ -11,13 +11,13 @@ class Rule():
 
     def __str__(self):
         return str(self.__class__.__name__)
-        
+
     def get_cost(self):
         return self.cost
 
     def apply(self, term):
         return self.app_funct(term)
-        
+
     def recurse_apply(self, term):
         if type(term) != Term:
             return []
@@ -28,17 +28,17 @@ class Rule():
                 new_terms[i] = rew
                 out.append(Term(term.op, new_terms))
         return out
-        
-        
+
+
 class SubstRule(Rule):
 
     def __init__(self, cost, subst):
         super().__init__(cost)
         self.subst = subst
-        
+
     def apply(self, term):
         return term.apply_subst(subst)
-        
+
 
 class RewriteRule(Rule):
 
@@ -46,23 +46,24 @@ class RewriteRule(Rule):
         super().__init__(cost)
         self.t1 = t1
         self.t2 = t2
-        
+
     def apply(self, term):
         out = []
         rew = term.rewrite(self.t1, self.t2)
         if rew:
             out.append(rew)
         return out + self.recurse_apply(term)
-        
-        
+
+
 class IdentIntroRule(Rule):
-    
+
     def __init__(self, cost, op, id, target_var=None):
         super().__init__(cost)
         self.op = op
         self.id = id
         self.target_var = target_var
-        
+        self.dont_target = [Var("SV", "s", 2, int)] if op == "+" and True else []
+
     def apply(self, term):
         out = []
         if type(term) == Var or type(term) == Const:
@@ -70,22 +71,22 @@ class IdentIntroRule(Rule):
                 return []
             if term.type != term_types[self.op].get_ret_type(): # TODO: be careful here and elsewhere
                 return []
-            out.append(Term(self.op, [term.__deepcopy__(), self.id]))
+            out.append(Term(self.op, [term.__deepcopy__(), self.id])) if term not in self.dont_target else 0
         if type(term) == Term and term.op == self.op:
             if self.target_var is None or self.target_var in term.terms:
                 new_term = term.__deepcopy__()
                 new_term.terms.append(self.id)
                 out.append(new_term)
         return out + self.recurse_apply(term)
-    
+
 class IdentElimRule(Rule):
-    
+
     def __init__(self, cost, op, id, target_var=None):
         super().__init__(cost)
         self.op = op
         self.id = id
         self.target_var = target_var
-        
+
     def apply(self, term, target_var=None):
         out = []
         if type(term) == Term and term.op == self.op:
@@ -95,7 +96,7 @@ class IdentElimRule(Rule):
                     new_term.terms.remove(self.id)
                     if len(new_term.terms) == 1:
                         new_term = new_term.terms[0]
-                    out.append(new_term)     
+                    out.append(new_term)
         return out + self.recurse_apply(term)
 
 
@@ -131,7 +132,7 @@ class InvElimRule(Rule):
         self.op = op
         self.inv_func = inv_func
         self.id = id
-        
+
     def apply(self, term):
         out = []
         if type(term) == Term and term.op == self.op:
@@ -145,14 +146,14 @@ class InvElimRule(Rule):
                         new_term = new_term.terms[0]
                     out.append(new_term)
         return out + self.recurse_apply(term)
-        
-        
+
+
 class DupIntroRule(Rule):
 
     def __init__(self, cost, op):
         super().__init__(cost)
         self.op = op
-        
+
     def apply(self, term):
         out = []
         if type(term) == Var or type(term) == Const:
@@ -164,16 +165,16 @@ class DupIntroRule(Rule):
                 if type(subterm) == Var or type(subterm) == Const: # remember to remove this condition
                     new_term = term.__deepcopy__()
                     new_term.terms.append(subterm)
-                    out.append(new_term)     
+                    out.append(new_term)
         return out + self.recurse_apply(term)
 
-        
+
 class DupElimRule(Rule):
 
     def __init__(self, cost, op):
         super().__init__(cost)
         self.op = op
-        
+
     def apply(self, term):
         out = []
         if type(term) == Term and term.op == self.op:
@@ -184,23 +185,23 @@ class DupElimRule(Rule):
                 else:
                     term_counts[subterm] += 1
             for subterm in term_counts.keys():
-                if term_counts[subterm] > 1: 
-                    new_term = term.__deepcopy__()          
+                if term_counts[subterm] > 1:
+                    new_term = term.__deepcopy__()
                     new_term.terms.remove(subterm)
                     if len(new_term.terms) == 1:
                         new_term = new_term.terms[0]
-                    out.append(new_term)    
+                    out.append(new_term)
         return out + self.recurse_apply(term)
- 
-    
+
+
 class DistInRule(Rule):
-    
+
     def __init__(self, cost, dist_ops, over_ops, over_term_inds=None):
         super().__init__(cost)
         self.dist_ops = dist_ops
         self.over_ops = over_ops
         self.over_term_inds = over_term_inds
-        
+
     def apply(self, term):
         out = []
         if type(term) == Term and term.op in self.dist_ops:
@@ -229,7 +230,7 @@ class DistInRule(Rule):
                             new_term = new_term.terms[0]
                         out.append(new_term)
         return out + self.recurse_apply(term)
-    
+
 
 class DistOutRule(Rule): # TODO: case when over_term is left with a single variable
 
@@ -238,14 +239,14 @@ class DistOutRule(Rule): # TODO: case when over_term is left with a single varia
         self.dist_ops = dist_ops
         self.over_ops = over_ops
         self.over_term_inds = over_term_inds
-        
+
     def apply(self, term):
         if self.over_term_inds is None:
             return self._apply_general(term)
         out = []
         if type(term) == Term and term.op in self.over_ops:
             for dist_op in self.dist_ops:
-                dist = True 
+                dist = True
                 comm_terms = None
                 for i in self.over_term_inds:
                     subterm = term.terms[i]
@@ -266,7 +267,7 @@ class DistOutRule(Rule): # TODO: case when over_term is left with a single varia
                                 p_term.terms[i] = p_term.terms[i].terms[0]
                         out.append(Term(dist_op, [comm_term, p_term]))
         return out + self.recurse_apply(term)
-        
+
     def _apply_general(self, term):
         out = []
         if type(term) == Term and term.op in self.over_ops:
@@ -279,7 +280,7 @@ class DistOutRule(Rule): # TODO: case when over_term is left with a single varia
                             if subsubterm not in ct:
                                 ct[subsubterm] = []
                             if i not in ct[subsubterm]:
-                                ct[subsubterm].append(i)        
+                                ct[subsubterm].append(i)
                 for r_term in ct.keys():
                     if len(ct[r_term]) > 1:
                         paired_terms = []
@@ -297,7 +298,7 @@ class DistOutRule(Rule): # TODO: case when over_term is left with a single varia
                         if other_terms:
                             out.append(Term(term.op, [t_term] + other_terms))
                         else:
-                            out.append(t_term) 
+                            out.append(t_term)
         return out + self.recurse_apply(term)
 
 
@@ -345,7 +346,7 @@ class MaxWeakenRule(Rule):
 
 ### Associativity / Commutativity ###
 
-        
+
 def flatten(term):
     if type(term) == Const:
         return Const(term.value)
@@ -359,17 +360,17 @@ def flatten(term):
             else:
                 new_terms.append(flatten(subterm))
         return Term(term.op, new_terms)
-    
-    
+
+
 def unflatten(term):
     if type(term) == Term and term.op in assoc_ops and len(term.terms) > 2: #term.flattened
         return Term(term.op, [unflatten(term.terms[0].__deepcopy__()),
                               unflatten(Term(term.op, term.terms[1:]))])
     if type(term) == Term:
-        # recurse    
+        # recurse
         return Term(term.op, [unflatten(subterm) for subterm in term.terms])
     return term.__deepcopy__()
-    
+
 
 def all_unflatten(term): # modulo state vars
     out = []
@@ -407,4 +408,3 @@ def all_unflatten(term): # modulo state vars
                                 out.append(Term(term.op, [left_unflatten, right_unflatten]))
             return out
     return [term.__deepcopy__()]
-  

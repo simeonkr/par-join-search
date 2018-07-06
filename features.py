@@ -6,8 +6,10 @@ inner_term = None
 
 
 def state_depth_diff_feature(state, new_term, rule_num):
-    return (max_state_depth(new_term) - max_state_depth(state.term)) * max_state_depth(new_term)
-
+    #return (max_state_depth(new_term) - max_state_depth(state.term)) * max_state_depth(new_term)
+    a = max_state_depth(new_term)
+    b = max_state_depth(state) if type(state) == Term else max_state_depth(state.term)
+    return max(0, (a-b)*b) + (100 if a >= 5 else 0)
 
 def state_count_diff_feature(state, new_term, rule_num):
     return (state_count(new_term) - state_count(state.term)) * state_count(new_term)
@@ -26,7 +28,7 @@ def sq_branching_factor_diff_feature(state, new_term, rule_num):
 
 
 def num_duplicates_feature(state, new_term, rule_num):
-    return get_duplicates(new_term)
+    return get_duplicates(new_term) #+ repeatedSubtermCount(new_term)
 
 
 def rule_history_feature(state, new_term, rule_num):
@@ -78,14 +80,25 @@ def sq_branching_factor(term):
     return _sq_sum_of_lens(term) / term.length()
 
 
-def max_state_depth(term, depth=0):
+def max_state_depthOLD(term, depth=0):
     if type(term) == Const:
         return 0
     if type(term) == Var:
         return depth if term.vclass == "SV" else 0
     return max([state_depth(subterm, depth + 1) for
                 subterm in term.terms])
+def max_state_depth(term):
+    def max_state_depthHelp(term):
+        if type(term) == Const:
+            return (0, False)
+        if type(term) == Var:
+            return (0, True) if term.vclass == "SV" else (0, False)
+        l = [max_state_depthHelp(subterm) for subterm in term.terms]
+        rec = max([x[0] for x in l])
+        b = any(x[1] for x in l)
+        return (1 + rec if b else 0, b)
 
+    return max_state_depthHelp(term)[0]
 
 def max_depth(term, depth=0):
     if type(term) == Const or type(term) == Var:
@@ -98,12 +111,13 @@ def num_const_only_terms(term):
     if type(term) == Const or type(term) == Var:
         return 0
     const_count = 0
-    for subterm in term.terms:
-        if type(subterm) == Const:
-            const_count += 1
-    if const_count == 1:
-        const_count = 0
-    return const_count + sum([num_const_only_terms(subterm) for
+    if term.op in {"+", "max"}:
+        for subterm in term.terms:
+            if type(subterm) == Const:
+                const_count += 1
+        if const_count == 1:
+            const_count = 0
+    return (100 if term.op is "max" else 0)*const_count + sum([num_const_only_terms(subterm) for
                              subterm in term.terms])
 
 
@@ -122,19 +136,22 @@ def get_duplicates(term):
     return number_of_duplicates(term.terms) + sum([get_duplicates(subterm) for subterm in term.terms])
 
 
-def number_of_duplicates(lst):
+def number_of_duplicates(lst, f = lambda x: 1 << x if x > 0 else 0):
     l = lst[:]
     count = 0
     for x in lst:
         subcount = -1
-        expcount = -1/2
+        #expcount = -1/2
         while x in l:
             l.remove(x)
-            subcount += 1
+            if subcount == -1:
+                subcount += 1
+            else:
+                subcount += 1 if not (type(x) == Const and (x.value is 0 or x.value is True or x.value is False)) and not (type(x) == Var) else 5
             # TODO: punish Consts more
-            expcount = 2*expcount + 1
+            #expcount = 2*expcount + 1
         #count += max(0, subcount)
-        count += int(expcount)
+        count += f(subcount)#int(expcount)
     return count
 
 
@@ -185,3 +202,18 @@ def term_inner_similarity(term, inner_term):
     subterms = term.terms if type(term) == Term else []
     return max([term_similarity(term, inner_term)] +
                [term_inner_similarity(subterm, inner_term) for subterm in subterms])
+
+def getAllSubterms(term):
+    if type(term) in {Const, Var}:
+        return []
+    l = [term]
+    for subterm in term.terms:
+        l.extend(getAllSubterms(subterm))
+    return l
+
+#TODO : TEST ME
+def repeatedSubtermCount(term):
+    if type(term) in {Const, Var}:
+        return 0
+    s = getAllSubterms(term)
+    return number_of_duplicates(s)
