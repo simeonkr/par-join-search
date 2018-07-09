@@ -62,7 +62,7 @@ class IdentIntroRule(Rule):
         self.op = op
         self.id = id
         self.target_var = target_var
-        self.dont_target = [Var("SV", "s", 2, int)] if op == "+" and True else []
+        #self.dont_target = [Var("SV", "s", 2, int)] if op == "+" and True else []
 
     def apply(self, term):
         out = []
@@ -71,7 +71,7 @@ class IdentIntroRule(Rule):
                 return []
             if term.type != term_types[self.op].get_ret_type(): # TODO: be careful here and elsewhere
                 return []
-            out.append(Term(self.op, [term.__deepcopy__(), self.id])) if term not in self.dont_target else 0
+            out.append(Term(self.op, [term.__deepcopy__(), self.id])) #if term not in self.dont_target else 0
         if type(term) == Term and term.op == self.op:
             if self.target_var is None or self.target_var in term.terms:
                 new_term = term.__deepcopy__()

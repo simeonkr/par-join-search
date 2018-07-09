@@ -38,6 +38,8 @@ def rule_history_feature(state, new_term, rule_num):
 def const_only_terms_diff_feature(state, new_term, rule_num):
     return num_const_only_terms(new_term)
 
+def repeatedVariables(state, new_term, rule_num):
+    return repeatedVariableCount(new_term)
 
 def term_similarity_diff_feature(state, new_term, rule_num, init_raw_term):
     max_new_term_similarity = 0
@@ -119,6 +121,13 @@ def num_const_only_terms(term):
             const_count = 0
     return (100 if term.op is "max" else 0)*const_count + sum([num_const_only_terms(subterm) for
                              subterm in term.terms])
+
+def all_const(term):
+    if type(term) == Const:
+        return True
+    if type(term) == Var:
+        return False
+    return all([all_const(subterm) for subterm in term.terms])
 
 
 # What I'm thinking off seems just to be max_state_depth, w/o SV I think?
@@ -217,3 +226,20 @@ def repeatedSubtermCount(term):
         return 0
     s = getAllSubterms(term)
     return number_of_duplicates(s)
+
+def repeatedVariableCount(term):
+    return 100*sum([max(0, value-3) for (key, value) in var_count(term).items()])
+
+
+def var_count(term):
+    if type(term) == Const:
+        return {}
+    if type(term) == Var and term.vclass == "SV":
+        return {term : 1}
+    out = {}
+    if type(term) == Term:
+        for subterm in term.terms:
+            sub_var_count = var_count(subterm)
+            for var in sub_var_count:
+                out[var] = sub_var_count[var] if var not in out else out[var] + sub_var_count[var]
+    return out

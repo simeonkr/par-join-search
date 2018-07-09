@@ -48,6 +48,7 @@ class RewriteStrategy(Strategy):
         costs.append(100 * const_only_terms_diff_feature(state, new_term, rule_num)) #10 used to be 1000
         costs.append(int(60 * term_similarity_diff_feature(
             state, new_term, rule_num, self.init_raw_term)))
+        costs.append(repeatedVariables(state, new_term, rule_num))
         # TODO: punish invariants; e.g.,
         #if rule_num in [10, 12, 14, 16, 18] and rule_num in state.get_rule_history():
         #   costs.append(100)

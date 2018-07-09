@@ -35,6 +35,7 @@ class JoinSearchProblem:
         self.hits = 0
         self.rule_choice_record = []
         self.benchmark_sequence = []
+        self.notDeep = set()
 
     def get_initial_state(self):
         return State(flatten(self.init_term), 0, None)
@@ -59,7 +60,7 @@ class JoinSearchProblem:
 
     # check if state is a goal state
     def outcome(self, state):
-        for _, uterm in loopthru(all_unflatten(state.term), I_UNFLATTEN,
+        for _, uterm in loopthru(list(set(all_unflatten(state.term))), I_UNFLATTEN,
                                  'select an unflattened variant of %s' % state.term):
             vprint(P_UNFLATTENED, "Unflattened %s to %s" % (state.term, uterm))
             for join in get_candidate_join_unfold_terms(self.lp, uterm):
@@ -96,7 +97,30 @@ class JoinSearchProblem:
             print(state.rule_num)
             input('Press Enter to continue...')
 
+    def good_guess(self, succ_term):
+        if len(self.notDeep) == 0: #I_REWRITE or 
+            return True
+        if succ_term.op == self.init_term.op:
+            if self.notDeep.intersection(set(succ_term.terms)) != self.notDeep:
+                return False
+        else:
+            return False
+        return True
+
+    def preprocess_initial_state(self):
+        self.notDeep = set()
+        for subterm in self.init_term.terms:
+            if type(subterm) == Var and subterm.vclass == "SV":
+                self.notDeep = self.notDeep.union({subterm.__deepcopy__()})
+        #righty = self.init_term.__deepcopy__()
+        #TODO derive right term from original init
+        #for i in range(len(self.lp.vars)):
+        #    s = self.lp.vars[i]
+            #TODO replace all instance of s in righty with its base case
+        #TODO somehow insert right into self.init_term
+
     def search(self):
+        self.preprocess_initial_state()
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
         open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
@@ -128,8 +152,10 @@ class JoinSearchProblem:
                     self.stats.log_state(state)
                     return outcome
 
-            for i, succ_state in loopthru(self.get_successors(state), I_REWRITE,
+            for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)], I_REWRITE,
                                           'select a rewrite of %s:' % state):
+                #if not self.good_guess(succ_state.term):
+                #    continue
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
@@ -185,4 +211,3 @@ class State:
         if self.par_state is None:
             return []
         return [self.rule_num] + self.par_state.get_rule_history()
-
