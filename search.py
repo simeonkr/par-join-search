@@ -10,6 +10,7 @@ from solver import EqSolver
 from statistics import SearchStats
 import features
 from util import loopthru, vprint
+from rightTerm import *
 from config import I_REWRITE, I_UNFLATTEN, \
     P_MAIN, P_STATES, P_SUCCESSORS, P_UNFLATTENED, \
     P_COSTS, P_STATE_PATH, P_SUCCESS_PATH, \
@@ -98,9 +99,15 @@ class JoinSearchProblem:
 
     def search(self):
         open_set = PriorityQueue()
-        init_state = self.get_initial_state()
-        open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
-        seen = {init_state : init_state.cost}
+        #init_state = self.get_initial_state()
+        seen = {}
+        for init_term in generateStartTerms(self.lp, self.solver):
+            init_state = State(flatten(init_term), 0, None)
+            open_set.put((init_state.cost, init_state))
+            seen[init_state] = init_state.cost
+            #open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
+            #seen = {init_state : init_state.cost}
+
         while not open_set.empty():
             _, state = open_set.get()
             self.state_count += 1
@@ -185,4 +192,3 @@ class State:
         if self.par_state is None:
             return []
         return [self.rule_num] + self.par_state.get_rule_history()
-
