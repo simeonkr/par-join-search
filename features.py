@@ -243,3 +243,50 @@ def var_count(term):
             for var in sub_var_count:
                 out[var] = sub_var_count[var] if var not in out else out[var] + sub_var_count[var]
     return out
+
+# Punishes a new_term that pushes state variables much deeper
+# than they are in the original term.
+def depthByInit(init, new_term):
+    S = getStateVars(init)
+    d = [getMaxDepthOfSV(new_term, s) for s in S]
+    e = [getMaxDepthOfSV(init, s) for s in S]
+    f = lambda x,y: 1000000*(x-y > 1)
+    return sum(f(x,y) for x,y in zip(d,e))
+
+
+import itertools
+# Returns all the state variables of a term.
+def getStateVars(term):
+    if type(term) == Var:
+        return {term} if term.vclass == "SV" else set()
+    if type(term) == Const:
+        return set()
+    return set(itertools.chain(*[getStateVars(subterm) for subterm in term.terms]))
+
+
+inf = 10000000000
+# Returns how deep s is in term.
+def getMaxDepthOfSV(term, s):
+    if type(term) == Const:
+        return -1
+    if type(term) == Var:
+        return 0 if s == term else -1
+    temp = max([getMaxDepthOfSV(subterm, s) for subterm in term.terms])
+    return 1 + temp if temp != -1 else -1
+
+
+from collections import Counter
+# Punishes a term if there are too many constants in the term.
+def tooManyConstants(term):
+    count = constVsVar(term)
+    return 10000*(count["c"] > 3*count["v"])
+
+# Returns the number of constants and vars and stores them in a counter
+# with keys "c" and "v respectively."
+def constVsVar(term):
+    if type(term) in {Const}:
+        return Counter({"c" : 1, "v": 0})
+    if type(term) in {Var}:
+        return Counter({"c" : 0, "v": 1})
+
+    return sum([constVsVar(subterm) for subterm in term.terms], Counter())

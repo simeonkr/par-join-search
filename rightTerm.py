@@ -53,7 +53,7 @@ def right(lp, term):
     return returned
 
 def removeDup(term):
-    if type(term) in {Const, Var}:
+    if type(term) in {Const, Var} or not term_types[term.op].fixed_args:
         return term
     new_term = Term(term.op, [])
     new_term.terms = list(set(flatten(term).terms))
@@ -179,11 +179,14 @@ def generateStartTerms(lp, solver):
     init_term = lp.get_state_term(lp.get_num_states() - 1)
     rights = rightAll(lp)
     print("rights : ", rights)
-    ret = generateStartTermsRecursive(init_term, rights)
+    ret = generateStartTermsRecursive(init_term, init_term, solver, rights)
+    print("A", ret)
+    ret = [x for x in ret if equivalent(solver, init_term, x)]
     ret = [term for term in ret if not TOOmany(term, rights)]
-
+    print("B",ret)
     ret = {removeDup(x) for x in ret}
-    ret = {x for x in ret if equivalent(solver, init_term, x)}
+    print("C",ret)
+    #ret = {x for x in ret if equivalent(solver, init_term, x)}
     # TODO limit new_terms so it only includes min depth terms
     #TODO perhaps store a dictionary then filter?
     # also because recursion do in caller function?
@@ -191,7 +194,7 @@ def generateStartTerms(lp, solver):
     #ret = set(outermost(ret, rights))
 
     printall(ret)
-    printall(outermost(ret, rights))
+    #printall(outermost(ret, rights))
     #ret = filterReturned(ret, rights)
     #ret = [x for x in ret if x.__str__() != "max(s2,0,IC(a0,(s1+1),IC(a0,(0+1),0)),IC(a0,(0+1),0))"]
     print("A")
@@ -203,7 +206,7 @@ def generateStartTerms(lp, solver):
 
     #ret = [x for x in ret if x.__str__() == "max(s2,0,IC(a0,(s1+1),0),IC(a0,(0+1),0))"]
     #ret = [x for x in ret if x.__str__() in {"max(s2,a0,(s1+max(a0,0,(a0+0))),(a0+0))", "max(s2,a0,0,(s1+a0),(a0+0))"}]
-
+    printall(ret)
     return ret
 
 # =====================================================================
@@ -254,8 +257,8 @@ return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else 
 
 # =====================================================================
 
-def generateStartTermsRecursive(term, rights):
-
+def generateStartTermsRecursive(term, init_term, solver, rights):
+    print("1.")
     if type(term) == Var and term.vclass == "SV":
         return [ term ]
 
@@ -271,7 +274,7 @@ def generateStartTermsRecursive(term, rights):
         # Generates all versions of this term, by replaces a subterm with a recursive call,
         # for every subterm.
 
-        recursive = [generateStartTermsRecursive(subterm, rights) for subterm in term.terms if (not constantOnly(subterm))] # else [subterm]
+        recursive = [generateStartTermsRecursive(subterm, init_term, solver, rights) for subterm in term.terms if (not constantOnly(subterm))] # else [subterm]
         constants = [subterm for subterm in term.terms if constantOnly(subterm)]
 
         # Get results from applying recursively to subterms who are not state-free.
@@ -302,7 +305,7 @@ def generateStartTermsRecursive(term, rights):
 
                     new_terms.append(new_term)
         #
-
+        #return [ x for x in new_terms if equivalent(solver, init_term, x) ]
         return new_terms
     else: #type(term_types[term.op].arg_type) is list:
         #TODO implement for things like ~, IC, whom have fixed args
@@ -314,7 +317,7 @@ def generateStartTermsRecursive(term, rights):
         # Generates all versions of this term, by replaces a subterm with a recursive call,
         # for every subterm.
 
-        recursive = [generateStartTermsRecursive(subterm, rights) if not constantOnly(subterm) else [subterm] for subterm in term.terms]
+        recursive = [generateStartTermsRecursive(subterm,init_term, solver, rights) if not constantOnly(subterm) else [subterm] for subterm in term.terms]
 
         # Get results from applying recursively to subterms who are not state-free.
         for tup in itertools.product(*recursive):
@@ -335,7 +338,7 @@ def generateStartTermsRecursive(term, rights):
 
                         new_terms.append(new_term)
         #
-
+        #return [ x for x in new_terms if equivalent(solver, init_term, x) ]
         return new_terms
 
 # =====================================================================

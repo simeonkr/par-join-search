@@ -1,0 +1,7 @@
+0; max(s1,a0)
+0; max(s2,min(s1,a0))
+
+max_sum_rules
+
+(s2>=0)
+(s1>=0)

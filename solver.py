@@ -32,7 +32,7 @@ class EqSolver:
                           'a4b': Bool('a4')
                           }
         self.eval_dict['max'] = lambda x,y : If(x > y, x, y)
-        self.eval_dict['min'] = lambda x,y : If(x > y, x, y)
+        self.eval_dict['min'] = lambda x,y : If(x > y, y, x)
         self.eval_dict['BC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['IC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['And'] = lambda x,y : And(x, y)

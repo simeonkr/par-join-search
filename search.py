@@ -131,13 +131,32 @@ class JoinSearchProblem:
         seen = {}
 
         # Tries some guesses before starting the actual search.
-        for init_term in generateStartTerms(self.lp, self.solver):
+        startTerms = generateStartTerms(self.lp, self.solver)
+        for init_term in startTerms:
             state = State(flatten(init_term), 0, None)
             self.stats.log_state(state)
+            open_set.put((state.cost + self.strategy.get_heuristic(state), state))
+            seen[init_state] = state.cost
+
+        count = 0
+        while count < 5*len(startTerms) and not open_set.empty():
+            _, state = open_set.get()
+            self.state_count += 1
+            self.strategy.state_visit(state)
+            self.stats.log_state(state)
+            vprint(P_STATES, "State", "[%d, %d]:" %
+                   (self.state_count, self.hits), state)
             outcome = self.outcome(state)
             if outcome:
                 self.stats.log_state(state)
                 return outcome
+
+            for succ_state in [succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)]:
+                succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
+                if not succ_state in seen or succ_metric < seen[succ_state]:
+                    seen[succ_state] = succ_metric
+                    open_set.put((succ_metric, succ_state))
+            count += 1
 
         init_state = init_state if self.alt is None else State(self.alt,0)
         open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
