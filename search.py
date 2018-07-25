@@ -99,7 +99,7 @@ class JoinSearchProblem:
             input('Press Enter to continue...')
 
     def good_guess(self, succ_term):
-        if len(self.notDeep) == 0: #I_REWRITE or 
+        if len(self.notDeep) == 0: #I_REWRITE or
             return True
         if succ_term.op == self.init_term.op:
             if self.notDeep.intersection(set(succ_term.terms)) != self.notDeep:
@@ -110,27 +110,40 @@ class JoinSearchProblem:
 
     def preprocess_initial_state(self):
         self.notDeep = set()
-        for subterm in self.init_term.terms:
+        for subterm in flatten(self.init_term).terms:
             if type(subterm) == Var and subterm.vclass == "SV":
                 self.notDeep = self.notDeep.union({subterm.__deepcopy__()})
-        #righty = self.init_term.__deepcopy__()
-        #TODO derive right term from original init
-        #for i in range(len(self.lp.vars)):
-        #    s = self.lp.vars[i]
-            #TODO replace all instance of s in righty with its base case
-        #TODO somehow insert right into self.init_term
+        from rightTerm import right
+
+        righty = flatten(right(self.lp, self.init_term))
+        self.alt = self.init_term.__deepcopy__()
+        self.alt.terms.extend(righty.terms)
+        #self.alt.terms.
+        if self.solver.equivalent(unflatten(self.init_term), unflatten(self.alt)):
+            self.notDeep = self.notDeep.union(set(righty.terms))
+        else:
+            self.alt = None
 
     def search(self):
         self.preprocess_initial_state()
         open_set = PriorityQueue()
-        #init_state = self.get_initial_state()
+        init_state = self.get_initial_state()
         seen = {}
+
+        # Tries some guesses before starting the actual search.
         for init_term in generateStartTerms(self.lp, self.solver):
-            init_state = State(flatten(init_term), 0, None)
-            open_set.put((init_state.cost, init_state))
-            seen[init_state] = init_state.cost
-            #open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
-            #seen = {init_state : init_state.cost}
+            state = State(flatten(init_term), 0, None)
+            self.stats.log_state(state)
+            outcome = self.outcome(state)
+            if outcome:
+                self.stats.log_state(state)
+                return outcome
+
+        init_state = init_state if self.alt is None else State(self.alt,0)
+        open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
+        seen = {init_state : init_state.cost}
+
+        t1=time()
 
         while not open_set.empty():
             _, state = open_set.get()
@@ -148,11 +161,13 @@ class JoinSearchProblem:
                 self.rewrite_check(state)
             if self.benchmark_sequence: # benchmark mode
                 if str(state.term) in self.benchmark_sequence:
-                    vprint(True, "### Milestone:", state, "###")
+                    t2=time()
+                    vprint(True, "### Milestone:", self.state_count, ". ", state, " ", round(t2-t1,2), " secs ", "###")
                     if self.benchmark_sequence[-1] == str(state.term):
                         return None
                     self.benchmark_sequence.remove(str(state.term))
                     self.hits += 1 # variable has different meaning in this case
+                    t1 = time()
             else:
                 outcome = self.outcome(state)
                 if outcome:

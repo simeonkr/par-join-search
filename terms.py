@@ -226,11 +226,11 @@ class Var(Const):
     '''
 
 
-ops = ["max", "+", "-", "&", "|", "IC", "BC", "=", "~", "~=", ">", ">="]
+ops = ["max", "min", "+", "*", "-", "&", "|", "IC", "BC", "=", "~", "~=", ">", ">="]
 unary_ops = ['~', '-']
-infix_ops = ['+', '&', '|', '=', '~=', '>', '>=']
-assoc_ops = ['+', '&', '|', 'max']
-comm_ops = ['+', '&', '|', '=', '~=', 'max']
+infix_ops = ['+', '*', '&', '|', '=', '~=', '>', '>=']
+assoc_ops = ['+', '*', '&', '|', 'max', 'min']
+comm_ops = ['+', '*', '&', '|', '=', '~=', 'max', 'min']
 
 
 class TermType():
@@ -251,10 +251,12 @@ class TermType():
 
 term_types = {}
 term_types['+'] = TermType(int, int)
+term_types['*'] = TermType(int, int)
 term_types['-'] = TermType([int], int, False)
 term_types['>'] = TermType([int, int], int, False)
 term_types['>='] = TermType([int, int], int, False)
 term_types['max'] = TermType(int, int)
+term_types['min'] = TermType(int, int)
 term_types['&'] = TermType(bool, bool)
 term_types['|'] = TermType(bool, bool)
 term_types['~'] = TermType([bool], bool, False)
@@ -366,7 +368,7 @@ class Term(Const):
         elif len(index) > 1:
             self.terms[index[0]].set_term_at(index[1:], term)
 
-    # finds only first occurence            
+    # finds only first occurence
     def get_subterm_index(self, subterm):
         if self == subterm:
             return []

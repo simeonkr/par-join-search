@@ -32,6 +32,7 @@ class EqSolver:
                           'a4b': Bool('a4')
                           }
         self.eval_dict['max'] = lambda x,y : If(x > y, x, y)
+        self.eval_dict['min'] = lambda x,y : If(x > y, x, y)
         self.eval_dict['BC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['IC'] = lambda x,y,z : If(x, y, z)
         self.eval_dict['And'] = lambda x,y : And(x, y)
@@ -43,10 +44,13 @@ class EqSolver:
     def equivalent(self, t1, t2):
         vprint(P_JOIN_VERIF, 'Solver: %s ?= %s' % (t1, t2))
         self.s.push()
-        self.s.add(eval(t1.get_str(True), {}, self.eval_dict) !=
-                   eval(t2.get_str(True), {}, self.eval_dict))
-        if self.s.check().r == Z3_L_FALSE:
+        try:
+            self.s.add(eval(t1.get_str(True), {}, self.eval_dict) !=
+                       eval(t2.get_str(True), {}, self.eval_dict))
+            if self.s.check().r == Z3_L_FALSE:
+                self.s.pop()
+                return True
             self.s.pop()
-            return True
-        self.s.pop()
+        except:
+            return False
         return False
