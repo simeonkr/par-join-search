@@ -2,7 +2,7 @@ from terms import Const, Var, Term
 from loop import Loop
 from rules import *
 from search import JoinSearchProblem
-from parser import parse
+from parserr import parse
 
 
 flattenRule = Rule(0, flatten)
@@ -31,6 +31,12 @@ bCondDistRevRule = DistOutRule(1, ['&', '|'], ['BC'], [1,2])
 iCondDistRule = DistInRule(20, ['+', 'max'], ['IC'], [1,2])
 iCondDistRevRule = DistOutRule(1, ['+', 'max'], ['IC'], [1,2])
 
+# NOTE: this rule needs to know the variables of the problem.
+
+s1 = Var("SV", "s", 1, bool)
+s2 = Var("SV", "s", 2, bool)
+a0 = Var("IV", "a", 0, bool)
+boolAxioms = BooleanAxioms(40, [s1, s2, a0])
 
 max_sum_rules = [maxDistRule, maxDistRevRule, maxIntroduceRule,
                  maxElimRule, zeroIntroduceRule, zeroElimRule]

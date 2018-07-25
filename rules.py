@@ -343,7 +343,55 @@ class MaxWeakenRule(Rule):
                 out.append(new_term)
         return out + self.recurse_apply(term)
 
+class BooleanAxioms(Rule):
+    def __init__(self, cost, booleans):
+        super().__init__(cost)
+        self.booleans = booleans
 
+    def apply(self, term):
+        out = []
+        if type(term) == Var:
+            return []
+        if type(term) == Const:
+            if term.type is bool:
+                if term.value:
+                    for b in self.booleans:
+                        out.append(Term("|", [b, Term("~", [b])]))
+                if not term.value:
+                    pass
+
+        if type(term) == Term:# and term.op == self.op:
+
+            if term.op == "~":
+                out.append(Term("&", [term, Const(True)]))
+
+            if len(term.terms) == 2:
+                subterm = term.terms[0]
+                other = term.terms[1]
+                if Term("~", [subterm]) == other or subterm == Term("~", [other]):
+                    out.append(Const(True))
+
+                for i in range(2):
+                    subterm = term.terms[1-i]
+                    other = term.terms[i]
+                    if type(subterm) == Term and subterm.op in {"|", "&"}:
+                        out.append(Term(subterm.op,
+                                        [Term(term.op,
+                                               [subsubterm.__deepcopy__(), other])
+                                                for subsubterm in subterm.terms]))
+
+        return out + self.recurse_apply(term)
+
+    def recurse_apply(self, term):
+        if type(term) != Term:
+            return []
+        out = []
+        for i in range(len(term.terms)):
+            for rew in self.apply(term.terms[i]):
+                new_terms = [subterm.__deepcopy__() for subterm in term.terms]
+                new_terms[i] = rew
+                out.append(Term(term.op, new_terms))
+        return out
 ### Associativity / Commutativity ###
 
 
