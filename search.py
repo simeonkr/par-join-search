@@ -159,6 +159,7 @@ class JoinSearchProblem:
             count += 1
 
         init_state = init_state if self.alt is None else State(self.alt,0)
+        open_set = PriorityQueue()
         open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
         seen = {init_state : init_state.cost}
 
