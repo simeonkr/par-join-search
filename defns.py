@@ -15,11 +15,13 @@ zeroElimRule = IdentElimRule(5, '+', Const(0))
 andIntroduceRule = IdentIntroRule(40, '&', Const(True))
 andElimRule = IdentElimRule(5, '&', Const(True))
 
-#orIntroduceRule = IdentIntroRule(40, '|', Const(False))
-#orElimRule = IdentElimRule(5, '|', Const(False))
+orIntroduceRule = IdentIntroRule(40, '|', Const(False))
+orElimRule = IdentElimRule(5, '|', Const(False))
 
-#boolIntroRule = InvIntroRule(60, '|', lambda x: x.negate(), Const(True), [Var('IV', 'a', 0, bool)])
-#boolElimRule = InvElimRule(5, '|', lambda x: x.negate(), Const(True))
+boolIntroRule = InvIntroRule(60, '|', lambda x: x.negate(), Const(True), [Var('IV', 'a', 0, bool)])
+boolElimRule = InvElimRule(5, '|', lambda x: x.negate(), Const(True))
+
+andOR = DistInRule(20, ["|"], ["&"])
 
 maxDistRule = DistInRule(20, ['+'], ['max'])
 maxDistRevRule = DistOutRule(1, ['+'], ['max'])
@@ -41,10 +43,14 @@ boolAxioms = BooleanAxioms(40, [s1, s2, a0])
 max_sum_rules = [maxDistRule, maxDistRevRule, maxIntroduceRule,
                  maxElimRule, zeroIntroduceRule, zeroElimRule]
 just_max_rules = [maxIntroduceRule, maxElimRule]
-bool_rules = [andIntroduceRule, andElimRule,# orIntroduceRule, orElimRule,
-              iCondDistRule, iCondDistRevRule#, boolIntroRule, boolElimRule
+bool_rules = [andIntroduceRule, andElimRule, #orIntroduceRule, orElimRule,
+              iCondDistRule, iCondDistRevRule, boolIntroRule, boolElimRule,
+              andOR, boolAxioms]
+Os0s = [andElimRule,#boolIntroRule, boolElimRule,
+              andOR,
+              boolAxioms
               ]
-
+              
 cond_max_rules = max_sum_rules + bool_rules
 
 

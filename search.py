@@ -103,6 +103,8 @@ class JoinSearchProblem:
             return True
         if succ_term.op == self.init_term.op:
             if self.notDeep.intersection(set(succ_term.terms)) != self.notDeep:
+                if all(type(x) == Const for x in self.notDeep.difference(set(succ_term.terms))):
+                    return True
                 return False
         else:
             return False

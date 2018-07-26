@@ -352,18 +352,18 @@ class BooleanAxioms(Rule):
         out = []
         if type(term) == Var:
             return []
-        if type(term) == Const:
+        """if type(term) == Const:
             if term.type is bool:
                 if term.value:
                     for b in self.booleans:
                         out.append(Term("|", [b, Term("~", [b])]))
                 if not term.value:
-                    pass
+                    pass"""
 
         if type(term) == Term:# and term.op == self.op:
 
-            if term.op == "~":
-                out.append(Term("&", [term, Const(True)]))
+            if term.get_ret_type() == bool:
+                out.append(Term("&", [term.__deepcopy__(), Const(True)]))
 
             if len(term.terms) == 2:
                 subterm = term.terms[0]
@@ -371,14 +371,14 @@ class BooleanAxioms(Rule):
                 if Term("~", [subterm]) == other or subterm == Term("~", [other]):
                     out.append(Const(True))
 
-                for i in range(2):
+                """for i in range(2):
                     subterm = term.terms[1-i]
                     other = term.terms[i]
                     if type(subterm) == Term and subterm.op in {"|", "&"}:
                         out.append(Term(subterm.op,
                                         [Term(term.op,
                                                [subsubterm.__deepcopy__(), other])
-                                                for subsubterm in subterm.terms]))
+                                                for subsubterm in subterm.terms]))"""
 
         return out + self.recurse_apply(term)
 
