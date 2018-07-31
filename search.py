@@ -121,7 +121,7 @@ class JoinSearchProblem:
         self.alt = self.init_term.__deepcopy__()
         self.alt.terms.extend(righty.terms)
         #self.alt.terms.
-        if self.solver.equivalent(unflatten(self.init_term), unflatten(self.alt)):
+        if self.init_term.op != "IC" and self.solver.equivalent(unflatten(self.init_term), unflatten(self.alt)):
             self.notDeep = self.notDeep.union(set(righty.terms))
         else:
             self.alt = None
@@ -135,8 +135,7 @@ class JoinSearchProblem:
         # Tries some guesses before starting the actual search.
         startTerms = generateStartTerms(self.lp, self.solver)
         for init_term in startTerms:
-            state = State(flatten(init_term), 0, None)
-            self.stats.log_state(state)
+            state = State(init_term, 0, None)
             open_set.put((state.cost + self.strategy.get_heuristic(state), state))
             seen[init_state] = state.cost
 

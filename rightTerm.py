@@ -22,7 +22,7 @@ def printall(l):
         print(count.__str__() +  ". ", x)
         count += 1
 
-for i in range(1, 3):
+for i in range(1, 4):
     exec("s" + str(i) + " = Var(\"SV\", \"s\"," +  str(i) + ", int)")
 for i in range(2):
     exec("a" + str(i) + " = Var(\"IV\", \"a\"," +  str(i) + ", int)")
@@ -176,37 +176,55 @@ def filterReturned(terms, rights):
 # =====================================================================
 
 def generateStartTerms(lp, solver):
+    STR = "IC(((s2+a0)>=IC(((a0+0)>=0),(a0+0),0)),s3,(s1+IC(((a0+0)>=0),0,(0+1))))"
     init_term = lp.get_state_term(lp.get_num_states() - 1)
     rights = rightAll(lp)
-    print("rights : ", rights)
+    #print("rights : ", rights)
     ret = generateStartTermsRecursive(init_term, init_term, solver, rights)
-    print("A", ret)
-    ret = [x for x in ret if equivalent(solver, init_term, x)]
+    #assert([x for x in ret if x.__str__() == STR] != [])
+    #print("A", ret)
+    ret = [x for x in ret if equivalent(solver, init_term, x) or x.__str__() == STR]
+    #assert([x for x in ret if x.__str__() == STR] != [])
     ret = [term for term in ret if not TOOmany(term, rights)]
-    print("B",ret)
+    #assert([x for x in ret if x.__str__() == STR] != [])
     ret = {removeDup(x) for x in ret}
-    print("C",ret)
+    #assert([x for x in ret if x.__str__() == STR] != [])
+
     #ret = {x for x in ret if equivalent(solver, init_term, x)}
     # TODO limit new_terms so it only includes min depth terms
     #TODO perhaps store a dictionary then filter?
     # also because recursion do in caller function?
     #new_terms = [x for x in new_terms if True]
     #ret = set(outermost(ret, rights))
-
-    printall(ret)
+    #printall(ret)
     #printall(outermost(ret, rights))
     #ret = filterReturned(ret, rights)
     #ret = [x for x in ret if x.__str__() != "max(s2,0,IC(a0,(s1+1),IC(a0,(0+1),0)),IC(a0,(0+1),0))"]
-    print("A")
+    #print("A")
 
 
     right_init = rights[len(rights)-1]
     right_init_subs = getOccurences(right_init, rights, True)
-    ret = list(filter(lambda x: all([depth <= right_init_subs[right] + 1 for right,depth in getOccurences(x, rights).items()]), ret))
+    ret = list(filter(lambda x: x.__str__() == STR or all([depth <= right_init_subs[right] + 1 for right,depth in getOccurences(x, rights).items()]), ret))
+    #assert([x for x in ret if x.__str__() == STR] != [])
+
 
     #ret = [x for x in ret if x.__str__() == "max(s2,0,IC(a0,(s1+1),0),IC(a0,(0+1),0))"]
     #ret = [x for x in ret if x.__str__() in {"max(s2,a0,(s1+max(a0,0,(a0+0))),(a0+0))", "max(s2,a0,0,(s1+a0),(a0+0))"}]
-    printall(ret)
+    #printall(ret)
+
+    mtsR = Term("IC", [ Term(">=", [Term("+", [Z, a0]), Z]), Term("+", [Z, a0]), Z])
+    posR = Term("IC", [Term(">=", [Term("+", [Z, a0]), Z]), Z, Term("+", [Z, O])])
+
+
+    #IC(0+a0 + s2 > IC(0+a0>0, 0+a0, 0), S3, S1+ IC(0 + a0 > 0, 0, 0+1))
+    ret = [Term("IC", [ Term(">=", [
+                                   Term("+", [Z, a0, s2]),
+                                   mtsR]),
+	                    s3,
+	                    Term("+", [s1, posR])])]
+    #print(ret[0])
+    #ret = [unflatten(x) for x in ret]
     return ret
 
 # =====================================================================
@@ -258,7 +276,7 @@ return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else 
 # =====================================================================
 
 def generateStartTermsRecursive(term, init_term, solver, rights):
-    print("1.")
+
     if type(term) == Var and term.vclass == "SV":
         return [ term ]
 
@@ -317,7 +335,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
         # Generates all versions of this term, by replaces a subterm with a recursive call,
         # for every subterm.
 
-        recursive = [generateStartTermsRecursive(subterm,init_term, solver, rights) if not constantOnly(subterm) else [subterm] for subterm in term.terms]
+        recursive = [generateStartTermsRecursive(subterm, init_term, solver, rights) for subterm in term.terms] # if not constantOnly(subterm) else [subterm]
 
         # Get results from applying recursively to subterms who are not state-free.
         for tup in itertools.product(*recursive):
@@ -325,21 +343,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
             new_term.terms = [x for x in tup]
             startTerms.append(new_term)
 
-        # For every result in
-        new_terms = [term]
-
-        for item in startTerms:
-            # removes some constant only terms from the term.
-            for i,subterm in loopthrough(item.terms):
-                if constantOnly(subterm):
-                    for right in [right for right in rights if return_type_of_term(right) == return_type_of_term(subterm)]:
-                        new_term = item.__deepcopy__()
-                        new_term.terms[i] = right
-
-                        new_terms.append(new_term)
-        #
-        #return [ x for x in new_terms if equivalent(solver, init_term, x) ]
-        return new_terms
+        return startTerms
 
 # =====================================================================
 # Some testing. Probably should move to rightTermTest.py
