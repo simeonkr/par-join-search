@@ -276,7 +276,6 @@ return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else 
 # =====================================================================
 
 def generateStartTermsRecursive(term, init_term, solver, rights):
-
     if type(term) == Var and term.vclass == "SV":
         return [ term ]
 

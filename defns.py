@@ -2,7 +2,7 @@ from terms import Const, Var, Term
 from loop import Loop
 from rules import *
 from search import JoinSearchProblem
-from parserr import parse
+from parser import parse
 
 
 flattenRule = Rule(0, flatten)
@@ -50,7 +50,7 @@ Os0s = [andElimRule,#boolIntroRule, boolElimRule,
               andOR,
               boolAxioms
               ]
-              
+
 cond_max_rules = max_sum_rules + bool_rules
 
 
