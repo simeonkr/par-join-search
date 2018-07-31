@@ -252,8 +252,8 @@ class TermType():
 term_types = {}
 term_types['+'] = TermType(int, int)
 term_types['-'] = TermType([int], int, False)
-term_types['>'] = TermType([int, int], int, False)
-term_types['>='] = TermType([int, int], int, False)
+term_types['>'] = TermType([int, int], bool, False)
+term_types['>='] = TermType([int, int], bool, False)
 term_types['max'] = TermType(int, int)
 term_types['&'] = TermType(bool, bool)
 term_types['|'] = TermType(bool, bool)
