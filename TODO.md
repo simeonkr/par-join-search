@@ -1,7 +1,9 @@
 # Tasks
 
-### Code Issues
+### Join Generation
 
+* Need to deal with combinatorial explosion due to introduction of `conj_existing_states` option.
+    * In particular, get `test_pos_mts_join` to pass.
 * `Loop.addState` needs to be implemented correctly.
    (On mps, the final join has a duplicate state varable.)  
    Make sure the test in `test_join` passes after making modifications.
