@@ -12,6 +12,9 @@ allUnflattenRule = Rule(float('inf'), all_unflatten)
 zeroIntroduceRule = IdentIntroRule(40, '+', Const(0))
 zeroElimRule = IdentElimRule(5, '+', Const(0))
 
+oneIntroduceRule = IdentIntroRule(40, '*', Const(1))
+oneElimRule = IdentElimRule(5, '*', Const(1))
+
 andIntroduceRule = IdentIntroRule(40, '&', Const(True))
 andElimRule = IdentElimRule(5, '&', Const(True))
 
@@ -50,6 +53,8 @@ Os0s = [andElimRule,#boolIntroRule, boolElimRule,
               andOR,
               boolAxioms
               ]
+
+atoi = [oneIntroduceRule, oneElimRule]
 
 cond_max_rules = max_sum_rules + bool_rules
 

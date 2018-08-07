@@ -39,6 +39,9 @@ class Const:
     def __repr__(self):
         return self.__str__()
 
+    def __contains__(self, other):
+        return self == other
+
     def length(self):
         return 1
 
@@ -155,6 +158,9 @@ class Var(Const):
 
     def __repr__(self):
         return self.__str__()
+
+    def __contains__(self, other):
+        return self == other
 
     def length(self):
         return 1
@@ -333,6 +339,18 @@ class Term(Const):
 
     def __repr__(self):
         return self.__str__()
+
+    def __contains__(self, other):
+        if any((other in subterm) for subterm in self.terms):
+            return True
+        if not term_types[self.op].fixed_args:
+            return self == other
+
+        #TODO. both comm/assoc?
+        if type(other) == Term and self.op == other.op and self.op in assoc_ops and self.op in comm_ops:
+            return set(other.terms).issubset(self.terms)
+
+        return False
 
     def length(self):
         return sum([term.length() for term in self.terms]) + 1
