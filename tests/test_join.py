@@ -1,5 +1,7 @@
 from join import *
 from loop import *
+from main import make_jsp
+from parser import parse
 import unittest
 
 
@@ -42,6 +44,27 @@ class TestMerge(unittest.TestCase):
                           Term("+", [s3, Term("+", [Const(0), s2])]),
                           Term("max", [Const(0), s4]),
                           Term("max", [s5, s4])])
+
+    # TODO: make these tests more thorough
+
+    def test_mts_join(self):
+        mts = make_jsp('../examples/mts.txt')
+        goal_term = parse('max((s1+(a0+0)),max(0,(a0+0)))')
+        self.assertIn(parse('max(sr1,(s1+sr2))'),
+                      [join.term for join in get_candidate_join_unfold_terms(mts.lp, goal_term)])
+
+    def test_mss_join(self):
+        mss = make_jsp('../examples/mss.txt')
+        goal_term = parse('max(s2,(s1+max(0,(a0+0))),max(0,max(a0,(a0+0))))')
+        self.assertIn(parse('max(s2,sr2,(s1+sr4))'),
+                      [join.term for join in get_candidate_join_unfold_terms(mss.lp, goal_term)])
+
+    def test_pos_mts_join(self):
+        pos_mts = make_jsp('../examples/pos_mts.txt')
+        goal_term = parse('IC(((s2+(a0+0))>IC(((a0+0)>0),(a0+0),0)),s3,(s1+IC(((a0+0)>0),0,(0+1))))')
+        self.assertIn(parse('IC(((s2+sr4)>sr2),s3,(s1+sr3))'),
+                      [join.term for join in get_candidate_join_unfold_terms(pos_mts.lp, goal_term)])
+
         
 if __name__ == '__main__':
     unittest.main()

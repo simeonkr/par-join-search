@@ -4,7 +4,7 @@ from lark import Lark, InlineTransformer
 
 term_grammar = """
     !const: INT | "True" | "False"
-    var: LETTER INT
+    !var: LETTER INT | "sr" INT
     !op: {}
     term: const | var | prefix_term | infix_term
     prefix_term: op "(" term (("," | ", ") term)* ")"
@@ -24,7 +24,9 @@ class TermTransformer(InlineTransformer):
             return Const(int(value.value))
 
     def var(self, name, index):
-        return Var('SV' if name == 's' else 'IV', name.value, int(index.value))
+        var_name_to_vclass = {"s" : "SV", "sr" : "RSV"}
+        return Var(var_name_to_vclass[name] if name in var_name_to_vclass else 'IV',
+                   name.value[0], int(index.value))
 
     def op(self, op):
         return op.value
