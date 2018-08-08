@@ -31,6 +31,7 @@ class JoinSearchProblem:
         self.rules = rules
         self.stats = SearchStats()
         self.strategy = RewriteStrategy(self.rules, self.stats, self.init_raw_term)
+        self.invars = invars
         self.solver = EqSolver([str(invar) for invar in invars])
         self.state_count = 0
         self.hits = 0
@@ -133,14 +134,15 @@ class JoinSearchProblem:
         seen = {}
 
         # Tries some guesses before starting the actual search.
-        startTerms = generateStartTerms(self.lp, self.solver)
+        startTerms = generateStartTerms(self.lp, self.solver, self.invars)
         for init_term in startTerms:
             state = State(init_term, 0, None)
             open_set.put((state.cost + self.strategy.get_heuristic(state), state))
-            seen[init_state] = state.cost
+            seen[state] = state.cost
 
         count = 0
-        while count < 5*len(startTerms) and not open_set.empty():
+        while (count < 5*len(startTerms)) and not open_set.empty():
+            count += 1
             _, state = open_set.get()
             self.state_count += 1
             self.strategy.state_visit(state)
@@ -157,7 +159,6 @@ class JoinSearchProblem:
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
                     open_set.put((succ_metric, succ_state))
-            count += 1
 
         init_state = init_state if self.alt is None else State(self.alt,0)
         open_set = PriorityQueue()

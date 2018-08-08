@@ -14,11 +14,12 @@ class Const:
 
     def __lt__(self, other):
         if type(other) == Const:
-            if type(self.value) == type(other.value):
-                return self.value < other.value
-            else: return self.value # TODO: do something smarter
+            return str(self) < str(other)
+            #if type(self.value) == type(other.value):
+            #    return self.value < other.value
+            #else: return self.value # TODO: do something smarter
         elif type(other) == Var:
-            return False
+            return True
         elif type(other) == Term:
             return True
 
@@ -128,14 +129,15 @@ class Var(Const):
 
     def __lt__(self, other):
         if type(other) == Var:
-            if self.vclass != other.vclass:
-                return self.vclass == 'SV'
-            if self.name == other.name:
-                return self.index < other.index
-            else:
-                return self.name < other.name
+            return str(self) < str(other)
+            #if self.vclass != other.vclass:
+            #    return self.vclass == 'SV'
+            #if self.name == other.name:
+            #    return self.index < other.index
+            #else:
+            #    return self.name < other.name
         elif type(other) == Const:
-            return True
+            return False
         elif type(other) == Term:
             return True
 
