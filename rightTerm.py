@@ -252,10 +252,10 @@ def generateStartTerms(lp, solver, invars):
     print("rights : ", rights)
     print("right vars :", [str(x) for x in list(rights.keys())])
     ret = generateStartTermsRecursive(init_term, init_term, solver, list(rights.keys()))
-    #print("at first :")
-    #printall(ret)
+    print("at first :")
+    printall(ret)
     #print("rer", ret)
-    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}# or x.__str__() == STR]
+    ret = {x for x in ret if equivalent(solver, rights, init_term, x, x.__str__() == "IC((s3>(s2+sr3)),s4,(s1+sr4))")}# or x.__str__() == STR]
     print("equiv")
     printall(ret)
     ret = highDepthRight(solver, rights, init_term,  ret, lastState)
@@ -292,7 +292,7 @@ def generateStartTerms(lp, solver, invars):
                                    Term("+", [Z, a0, s2]),
                                    mtsR]),
 	                    s3,
-	                    Term("+", [s1, posR])])]"""
+	                    Term("+", [s1, O, posR])])]"""
     #print(ret[0])
     #ret = [unflatten(x) for x in ret]
 
@@ -301,6 +301,7 @@ def generateStartTerms(lp, solver, invars):
     printall(ret)
     print()
     #print([list({induceRight(term, rights) for term in ret})[len(ret)-1]])
+    return ret
     return list({induceRight(term, rights) for term in ret})
     #return [list({induceRight(term, rights) for term in ret})[len(ret)-1]] #ret
 

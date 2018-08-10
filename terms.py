@@ -281,6 +281,8 @@ class Term(Const):
     def __eq__(self, other):
         if type(other) != Term:
             return False
+        if not term_types[self.op].fixed_args:
+            return other.terms == self.terms and self.op == other.op
         return self.op == other.op and len(self.terms) == len(other.terms) \
             and sorted(self.terms) == sorted(other.terms)
         '''

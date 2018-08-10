@@ -149,12 +149,15 @@ class JoinSearchProblem:
             self.stats.log_state(state)
             vprint(P_STATES, "State", "[%d, %d]:" %
                    (self.state_count, self.hits), state)
+            for pred in [state] + state.get_predecessors():
+                vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
+                    ['%3s' % str(cost) for cost in pred.cost_breakdown])))
             outcome = self.outcome(state)
             if outcome:
                 self.stats.log_state(state)
                 return outcome
 
-            for succ_state in [succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)]:
+            for succ_state in [succ for succ in list(set(self.get_successors(state)))]:
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
