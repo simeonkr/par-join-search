@@ -9,7 +9,7 @@ term_grammar = """
     term: const | var | prefix_term | infix_term
     prefix_term: op "(" term (("," | ", ") term)* ")"
     infix_term: "(" term (op term)* ")"
-    
+
     %import common.INT
     %import common.LETTER
 """.format(' | '.join(['"%s"' % op for op in ops]))
@@ -19,7 +19,7 @@ class TermTransformer(InlineTransformer):
 
     def const(self, value):
         if value.value == 'True' or value.value == 'False':
-            return Const(bool(value.value))
+            return Const(value.value == 'True')
         else:
             return Const(int(value.value))
 
