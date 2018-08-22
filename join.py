@@ -42,6 +42,15 @@ def _gcjut_rec(loop, t, conj_existing_states=False):
 
     # Base case
     if type(t) == Var or type(t) == Const:
+        if type(t) == Var and t.vclass == "IV":
+            i = loop.get_num_states() + 1
+            sRi = Var("RSV", "s", i, t.type)
+            si = Var("SV", "s", i, t.type)
+            l = loop.__deepcopy__()
+            l.state_init.append(t)
+            l.state_terms.append(si)
+            vprint(P_JOIN_GEN, "Join: got join:", Join(l, sRi))
+            #return [Join(loop, t), Join(l, sRi)]#, Join(l2, sRi)]
         return [Join(loop, t)]
 
     out = []
@@ -64,7 +73,9 @@ def _gcjut_rec(loop, t, conj_existing_states=False):
         # Find all constants and obtain a mapping to their locations
         const_indv = _get_const_indv(merged_join.term)
         if not const_indv:
-            return out
+            # TODO why return?
+            continue
+            #return out
 
         for const in const_indv.keys():
             vprint(P_JOIN_GEN, "Join: const %s appears in locations %s within %s)" %

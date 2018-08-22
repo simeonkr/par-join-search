@@ -38,11 +38,12 @@ def rightAll(lp):
     d = {}
     i = 1
     for term in lp.state_terms:
-        rsv = Var("RSV", "s", i, lp.get_state_init(i-1).type)
+        rsv = Var("RSV", "s", i, lp.get_state_init(i-1).type if type(lp.get_state_init(i-1)) != Term else lp.get_state_init(i-1).get_ret_type())
         d[rsv] = right(lp, term)
         i += 1
     return d
 
+# NOTE done in loop class?
 #Returns the right-induced version of term, assuming it is in the lp.
 def right(lp, term):
     if type(term) == Var and term.vclass == "SV":
@@ -65,7 +66,7 @@ def rightMe(invar):
         return invar if invar.vclass == "RSV" else Var("RSV", invar.name, invar.index, invar.type)
     return Term(invar.op, [rightMe(x) for x in invar.terms])
 
-# Simplifies a term from the algorithm by remving any repeated subterms or
+# Simplifies a term from the algorithm by removing any repeated subterms or
 # other redudancies.
 def removeDup(solver, rights, term, invars, lastState):
     #print()
@@ -84,7 +85,7 @@ def removeDup(solver, rights, term, invars, lastState):
 
     # If term is like max(a,b,...) and a >= b is an invaraint, then turn the
     # term into max(a,...)
-    for invar in invars:
+    """for invar in invars:
         # TODO generalize
         invar2 = rightMe(invar)
         if invar.op in {">=", ">"}:
@@ -93,7 +94,7 @@ def removeDup(solver, rights, term, invars, lastState):
                     if term.op == "max":
                         term.terms.remove(x.terms[1])
                     elif term.op == "min":
-                        term.terms.remove(x.terms[0])
+                        term.terms.remove(x.terms[0])"""
     #print("ABA", new_term)
     return term
 
@@ -119,11 +120,11 @@ def TOOmany(term, rights):
     return any([y > THRESHOLD for y in dict(TOOmanyHELP(term, rights)).values()])
 
 
-infinity = 10000000
+#infinity = 10000000
 #NOTE here the depth is sometimes counted wrong because of one term being contained in another!
 #So a thing TODO change so it does all right things at the same time.
 "Returns how deep each right SV is in term. 1000000000 if not in term"
-def depthOfSub(term, rights):
+"""def depthOfSub(term, rights):
     if type(term) in {Const, Var}:
         if term in rights:
             d = {right : infinity for right in rights if right != term}
@@ -140,12 +141,12 @@ def depthOfSub(term, rights):
 
             temp = min([depthOfSub(sub, rights)[subterm] for sub in term.terms])
             d[subterm] = infinity if temp == infinity else 1 + temp
-    return d
+    return d"""
 
 """Unused and unimplemented function (for now).
 Should return lst so that if x in y, then x only occurs before y in the lst
 (or the opposite, doesn't really matter)."""
-def dependencySort(lst):
+"""def dependencySort(lst):
     return lst
     l = []
     count = 0
@@ -160,11 +161,11 @@ def dependencySort(lst):
                 pass
         l.insert(x)
         count += 1
-    return l
+    return l"""
 
 """Returns only the elements from generateStartTermsRecursive
 that have the right subterms at a higher level."""
-def outermost(ret, rights):
+"""def outermost(ret, rights):
     returned = list(ret)
     keepers = []
     R = list(rights)
@@ -177,12 +178,12 @@ def outermost(ret, rights):
                 keepers = [r]
             elif depth == mindepth:
                 keepers.append(r)
-    return keepers
+    return keepers"""
 
-def getOccurences(term, rights, inf=False):
-    return dict(filter(lambda x : inf or x[1] < infinity, [(right, depthOfSub(term, rights)[right]) for right in rights]))
+"""def getOccurences(term, rights, inf=False):
+    return dict(filter(lambda x : inf or x[1] < infinity, [(right, depthOfSub(term, rights)[right]) for right in rights]))"""
 
-def filterReturned(terms, rights):
+"""def filterReturned(terms, rights):
     out = set(terms)
     R = list(rights)
     R.reverse()
@@ -201,7 +202,7 @@ def filterReturned(terms, rights):
             else:
                 the = the.union({term})
         out = out.intersection(the)
-    return out
+    return out"""
 # =====================================================================
 # generateStartTerms:
 
@@ -212,13 +213,15 @@ def stringDeclaration(term, rec=True):
     if type(term) == Const:
         return "Const(" + term.value.__str__() + ")"
     if type(term) == Var:
-        return "Var(" + term.vclass + ", " + term.name + "," + str(term.index) + ", " + str(term.type) + ")"
+        type_of_term = "int" if term.type == int else bool
+        return "Var(" + term.vclass + ", " + term.name + "," + str(term.index) + ", " + type_of_term + ")"
 
     if rec:
-        return "Term(" + term.op + ", " + str([stringDeclaration(subterm, rec) for subterm in term.terms]) + ")"
-
+        out = "Term(" + term.op + ", " + ", ".join([stringDeclaration(subterm, rec) for subterm in term.terms]) + ")"
+        return out
     return "Term(" + term.op + ", " + str(term.terms) + ")"
 
+# TODO explain what this does
 def highDepthRight(solver, rights, init_term, ret, lastState):
 
     if type(init_term) in {Const, Var} or not term_types[init_term.op].fixed_args or lastState not in init_term.terms:
@@ -243,67 +246,30 @@ def highDepthRight(solver, rights, init_term, ret, lastState):
             new_ret.append(new_item)
     return new_ret
 
+#TODO explain
 def generateStartTerms(lp, solver, invars):
-    STR = "IC(((s2+a0)>=IC(((a0+0)>=0),(a0+0),0)),s3,(s1+IC(((a0+0)>=0),0,(0+1))))"
+    #STR = "IC(((s2+a0)>=IC(((a0+0)>=0),(a0+0),0)),s3,(s1+IC(((a0+0)>=0),0,(0+1))))"
     init_term = flatten(lp.get_state_term(lp.get_num_states() - 1))
+
+    #NOTE 1 unfold for problem like counting peaks
+    # TODO add a check for it later
+    #init_term = flatten(init_term.apply_subst_multi(lp.get_full_state_subst(), 1))
+
     lastState = Var("SV", "s", lp.get_num_states())
 
     rights = rightAll(lp)
-    print("rights : ", rights)
-    print("right vars :", [str(x) for x in list(rights.keys())])
     ret = generateStartTermsRecursive(init_term, init_term, solver, list(rights.keys()))
-    print("at first :")
-    printall(ret)
-    #print("rer", ret)
-    ret = {x for x in ret if equivalent(solver, rights, init_term, x, x.__str__() == "IC((s3>(s2+sr3)),s4,(s1+sr4))")}# or x.__str__() == STR]
-    print("equiv")
-    printall(ret)
+    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}# or x.__str__() == STR]
+    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}# or x.__str__() == STR]
     ret = highDepthRight(solver, rights, init_term,  ret, lastState)
     ret = {removeDup(solver, rights, x, invars, lastState) for x in ret}.difference({None})
-    print("removeDup")
-    printall(ret)
-
-
-
-
     ret = {term for term in ret if not TOOmany(term, rights)}
-
-    #print("rer")
-    #printall(ret)
-
-    #ret = filterReturned(ret, rights)
-
-    #right_init = rights[len(rights)-1]
-    #right_init_subs = getOccurences(right_init, rights, True)
-    #ret = list(filter(lambda x: x.__str__() == STR or all([depth <= right_init_subs[right] + 1 for right,depth in getOccurences(x, rights).items()]), ret))
-    #assert([x for x in ret if x.__str__() == STR] != [])
-
-
-    #ret = [x for x in ret if x.__str__() == "max(s2,0,IC(a0,(s1+1),0),IC(a0,(0+1),0))"]
-    #ret = [x for x in ret if x.__str__() in {"max(s2,a0,(s1+max(a0,0,(a0+0))),(a0+0))", "max(s2,a0,0,(s1+a0),(a0+0))"}]
-    #printall(ret)
-
-    mtsR = Term("IC", [ Term(">=", [Term("+", [Z, a0]), Z]), Term("+", [Z, a0]), Z])
-    posR = Term("IC", [Term(">=", [Term("+", [Z, a0]), Z]), Z, Term("+", [Z, O])])
-
-
-    #IC(0+a0 + s2 > IC(0+a0>0, 0+a0, 0), S3, S1+ IC(0 + a0 > 0, 0, 0+1))
-    """ret = [Term("IC", [ Term(">=", [
-                                   Term("+", [Z, a0, s2]),
-                                   mtsR]),
-	                    s3,
-	                    Term("+", [s1, O, posR])])]"""
-    #print(ret[0])
-    #ret = [unflatten(x) for x in ret]
 
     print("init:", init_term)
     print("### Final output : ")
     printall(ret)
     print()
-    #print([list({induceRight(term, rights) for term in ret})[len(ret)-1]])
-    return ret
-    return list({induceRight(term, rights) for term in ret})
-    #return [list({induceRight(term, rights) for term in ret})[len(ret)-1]] #ret
+    return ret#.difference({init_term})
 
 # =====================================================================
 # Helpers for the function generateStartTermsRecursive.
@@ -319,29 +285,29 @@ def constantOnly(term):
 
 # Returns a new term: same as the old one, but with items appended to its subterms.
 #NOTE unused
-def termAppendReturn(term, items):
+"""def termAppendReturn(term, items):
     assert(type(term) == Term)
     term = term.__deepcopy__()
     for x in items:
         term.terms.append(x)
-    return term
+    return term"""
 
 # Returns a new term: same as the old one, but with subs removed from its subterms.
 #NOTE unused
-def removeTheseReturn(term, subs):
+"""def removeTheseReturn(term, subs):
     new_term = term.__deepcopy__()
     for sub in subs:
         new_term.terms.remove(sub)
-    return new_term
+    return new_term"""
 
-def checker(terms):
+"""def checker(terms):
     def checkit(term):
         if type(term) == Const:
             assert(term.type == type(term.value))
             assert(term.type != Const)
         if type(term) == Term:
             [checkit(subterm) for subterm in term.terms]
-    [checkit(term) for term in terms]
+    [checkit(term) for term in terms]"""
 
 return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else term.get_ret_type()
 
@@ -452,12 +418,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
 # =====================================================================
 
 
-max2_invars = ["s2>=0", "s1>=0"] #"s1>=s2",
-max2solver = EqSolver(max2_invars)
-maxTerm = Term("max", [s1, a0])
-max2Term = Term("max", [s2, Term("min", [s1, a0])])
-
-
+#TODO
 def induceRight(term, rights):
     if type(term) == Const:
         return term.__deepcopy__()
@@ -473,32 +434,6 @@ def equivalent(solver, rights, orig, new, printMe=False):
     print("### Solver: ", flatten(orig), "v.s.", flatten(new), "(", flatten(induceRight(new, rights)) , ") = ", out) if printMe else 0
     return True and out
 
-
-#min(s1,a0,max(a0,0)) ?= min(s1,a0)
-#print("BADDDD ", max2solver.equivalent(Term("min", [s1,a0, Term("max", [a0, Z])] ), Term("min", [s1,a0])))
-
-"max(s2, min(s1,a0))   v.s.   max(s2, 0, min(0, a0), min(s1, max(0, a0)))"
-"""print("good", equivalent(max2solver,
-                          Term("max", [s2, Term("min", [s1, a0])]),
-                          Term("max", [s2,
-                                       Const(0),
-                                       Term("min", [Const(0), a0]),
-                                       Term("min", [s1, Term("max", [Const(0), a0])])])))"""
-
-
-"max(s2, min(s1,a0)) v.s. max(s2,max(0,min(a0,0)),min(s1,max(a0,0)))"
-"""print("not good", equivalent(max2solver,
-                              Term("max", [s2, Term("min", [s1, a0])]),
-                              Term("max", [s2,
-                                           Term("max", [Const(0), Term("min", [Const(0), a0])]),
-                              Term("min", [s1, Term("max", [Const(0), a0])])])))"""
-
 #====================================================
-# Testing the subset of term feature
+# Testing  misc things
 #====================================================
-
-sub = Term("+", [s1, a0])
-term = Term("max", [s2, sub, a0])
-
-assert(sub in term)
-assert(not term in sub)

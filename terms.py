@@ -234,11 +234,11 @@ class Var(Const):
     '''
 
 
-ops = ["max", "min", "+", "*", "-", "&", "|", "IC", "BC", "=", "~", "~=", ">", ">="]
+ops = ["max", "min", "+", "*", "-", "&", "|", "IC", "BC", "==", "~", "~=", ">", ">="]
 unary_ops = ['~', '-']
-infix_ops = ['+', '*', '&', '|', '=', '~=', '>', '>=']
+infix_ops = ['+', '*', '&', '|', '==', '~=', '>', '>=']
 assoc_ops = ['+', '*', '&', '|', 'max', 'min']
-comm_ops = ['+', '*', '&', '|', '=', '~=', 'max', 'min']
+comm_ops = ['+', '*', '&', '|', '==', '~=', 'max', 'min']
 
 
 class TermType():
@@ -270,7 +270,7 @@ term_types['|'] = TermType(bool, bool)
 term_types['~'] = TermType([bool], bool, False)
 term_types['BC'] = TermType([bool, bool, bool], bool, False)
 term_types['IC'] = TermType([bool, int, int], int, False)
-term_types['~'] = TermType([bool], bool, False)
+term_types['=='] = TermType([int, int], bool, False)
 
 class Term(Const):
 
