@@ -19,7 +19,7 @@ from config import I_REWRITE, I_UNFLATTEN, \
 
 class JoinSearchProblem:
 
-    def __init__(self, lp, rules, invars, initial_subst = None, pars = None, typeOfSearch="pre"):
+    def __init__(self, lp, rules, invars, initial_subst = None, pars = None, typeOfSearch="pre", init_terms=[]):
         self.lp = lp
         self.init_term = lp.get_state_term(lp.get_num_states() - 1)
         if initial_subst:
@@ -39,6 +39,7 @@ class JoinSearchProblem:
         self.benchmark_sequence = []
         self.notDeep = set()
         self.iterations = 10 if typeOfSearch in {"pre", "aux_pre"} else 0
+        self.init_terms = [self.init_term] if init_terms in [[], None] else init_terms
 
     def get_initial_state(self):
         return State(flatten(self.init_term), 0, None)
@@ -74,7 +75,7 @@ class JoinSearchProblem:
 
                 # temporarily using unflatten here
                 solver_start = time()
-                equiv = self.solver.equivalent(self.unfolded_term, unflatten(join.induced_term(2)), True)
+                equiv = self.solver.equivalent(self.unfolded_term, unflatten(join.induced_term(2)))
                 solver_end = time()
                 self.stats.log_join(state, join, solver_end - solver_start, equiv)
                 if equiv:
@@ -195,31 +196,9 @@ class JoinSearchProblem:
                 count += 1
                 for init_term, (open_set, seen), notDeep in zip(startTerms, queues, shallow_state_vars):
                     if not open_set.empty():
-                        cost, state = open_set.get()
-                        if state in seen and seen[state] < cost:
-                            continue
-                        seen[state] = -1000000000000000
-
-                        self.state_count += 1
-                        self.strategy.state_visit(state)
-                        self.stats.log_state(state)
-                        vprint(P_STATES, "State", "[%d, %d]:" %
-                               (self.state_count, self.hits), state)
-                        for pred in [state] + state.get_predecessors():
-                            vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
-                                ['%3s' % str(cost) for cost in pred.cost_breakdown])))
-                        outcome = self.outcome(state)
-                        if outcome:
-                            self.stats.log_state(state)
-                            return outcome
-                        for _,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guessA(init_term, succ.term, notDeep)],
-                                                                                            I_REWRITE, 'select a rewrite of %s:' % state):
-                            #continue
-                            succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
-                            if not succ_state in seen or succ_metric < seen[succ_state]:
-                                seen[succ_state] = succ_metric
-                                open_set.put((succ_metric, succ_state))
-        #return None
+                        join = self.next_rights(open_set, seen, init_term, notDeep)
+                        if join is not None:
+                            return join
         init_state = init_state if self.alt is None else State(self.alt,0)
         open_set = PriorityQueue()
         open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
@@ -228,48 +207,93 @@ class JoinSearchProblem:
 
         t1=time()
         while not open_set.empty():
-            cost, state = open_set.get()
-            if state in seen and seen[state] < cost:
-                continue
-            seen[state] = -1000000000000000
+            join = self.next_orig(open_set, seen)
+            if join is not None:
+                return join
+        return None
 
-            self.state_count += 1
-            self.strategy.state_visit(state)
-            self.stats.log_state(state)
-            vprint(P_STATES, "State", "[%d, %d]:" %
-                   (self.state_count, self.hits), state)
-            vprint(P_COSTS, 'State costs: ', ', '.join(
-                [str(cost) for cost in state.cost_breakdown]))
-            for pred in [state] + state.get_predecessors():
-                vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
-                    ['%3s' % str(cost) for cost in pred.cost_breakdown])))
-            if R_CHECK:
-                self.rewrite_check(state)
-            if self.benchmark_sequence: # benchmark mode
-                if str(state.term) in self.benchmark_sequence:
-                    t2=time()
-                    vprint(True, "### Milestone:", self.state_count, ". ", state, " ", round(t2-t1,2), " secs ", "###")
-                    if self.benchmark_sequence[-1] == str(state.term):
-                        return None
-                    self.benchmark_sequence.remove(str(state.term))
-                    self.hits += 1 # variable has different meaning in this case
-                    t1 = time()
-            else:
-                outcome = self.outcome(state)
-                if outcome:
-                    self.stats.log_state(state)
-                    return outcome
+    def next_orig(self, open_set, seen):
+        cost, state = open_set.get()
+        if state in seen and seen[state] < cost:
+            return None
+        seen[state] = -1000000000000000
 
-            for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)], I_REWRITE,
-                                          'select a rewrite of %s:' % state):
+        self.state_count += 1
+        self.strategy.state_visit(state)
+        self.stats.log_state(state)
+        vprint(P_STATES, "State", "[%d, %d]:" %
+               (self.state_count, self.hits), state)
+        vprint(P_COSTS, 'State costs: ', ', '.join(
+            [str(cost) for cost in state.cost_breakdown]))
+        for pred in [state] + state.get_predecessors():
+            vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
+                ['%3s' % str(cost) for cost in pred.cost_breakdown])))
+        if R_CHECK:
+            self.rewrite_check(state)
+        if self.benchmark_sequence: # benchmark mode
+            if str(state.term) in self.benchmark_sequence:
+                t2=time()
+                vprint(True, "### Milestone:", self.state_count, ". ", state, " ", round(t2-t1,2), " secs ", "###")
+                if self.benchmark_sequence[-1] == str(state.term):
+                    return None
+                self.benchmark_sequence.remove(str(state.term))
+                self.hits += 1 # variable has different meaning in this case
+                t1 = time()
+        else:
+            outcome = self.outcome(state)
+            if outcome:
+                self.stats.log_state(state)
+                return outcome
+        for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)], I_REWRITE,
+                                      'select a rewrite of %s:' % state):
 
+            succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
+            if not succ_state in seen or succ_metric < seen[succ_state]:
+                seen[succ_state] = succ_metric
+                open_set.put((succ_metric, succ_state))
+            self.rule_choice_record.append(i)
+        return None
+
+    def next_rights(self, open_set, seen, init_term, notDeep):
+        cost, state = open_set.get()
+        if state in seen and seen[state] < cost:
+            return None
+        seen[state] = -1000000000000000
+
+        self.state_count += 1
+        self.strategy.state_visit(state)
+        self.stats.log_state(state)
+        vprint(P_STATES, "State", "[%d, %d]:" %
+               (self.state_count, self.hits), state)
+        vprint(P_COSTS, 'State costs: ', ', '.join(
+            [str(cost) for cost in state.cost_breakdown]))
+        for pred in [state] + state.get_predecessors():
+            vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
+                ['%3s' % str(cost) for cost in pred.cost_breakdown])))
+        if R_CHECK and False:
+            self.rewrite_check(state)
+        if self.benchmark_sequence: # benchmark mode
+            if str(state.term) in self.benchmark_sequence:
+                t2=time()
+                vprint(True, "### Milestone:", self.state_count, ". ", state, " ", round(t2-t1,2), " secs ", "###")
+                if self.benchmark_sequence[-1] == str(state.term):
+                    return None
+                self.benchmark_sequence.remove(str(state.term))
+                self.hits += 1 # variable has different meaning in this case
+                t1 = time()
+        else:
+            outcome = self.outcome(state)
+            if outcome:
+                self.stats.log_state(state)
+                return outcome
+            for i,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guessA(init_term, succ.term, notDeep)],
+                                                                                I_REWRITE, 'select a rewrite of %s:' % state):
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:
                     seen[succ_state] = succ_metric
                     open_set.put((succ_metric, succ_state))
                 self.rule_choice_record.append(i)
         return None
-
     '''
     def verify(self, rule_sequence):
         state = self.get_initial_state()
