@@ -1,9 +1,10 @@
 from sys import argv, exit, stdin
-from signal import signal, SIGINT, SIGALRM, alarm
+from signal import signal, SIGINT#, SIGALRM, alarm
+from rightTerm import generateStartTerms
 
 from defns import *
 from config import P_STATS
-from parser import parse
+from parserr import parse
 from search import JoinSearchProblem
 
 
@@ -40,10 +41,33 @@ def print_join(join):
 if __name__ == '__main__':
 
     jsp = make_jsp('examples/%s.txt' % argv[2])
+    join = None
 
     if argv[1] == 'search':
         signal(SIGINT, lambda sig, frame: [jsp.stats.print_summary(), exit(0)])
-        join = jsp.search()
+
+        # Thread v.s. not thread
+        threads = 0
+
+        # Search with better guess terms.
+        if not threads:
+            join = jsp.search(init_terms=generateStartTerms(jsp.lp, jsp.solver, jsp.invars))
+        else:
+            terms = generateStartTerms(jsp.lp, jsp.solver, jsp.invars)
+            joins = {}
+
+            #TODO threads
+            for term in terms:
+                joins[term] = jsp.search(init_terms=[term])
+
+            for term in joins:
+                if joins[term] is not None:
+                    join = joins[term]
+                    break
+
+        # Standard search if it doesn't work
+        if join is None:
+            join = jsp.search()
 
     if argv[1] == 'timed':
         signal(SIGALRM, lambda sig, frame: [jsp.stats.print_summary(), exit(0)])
@@ -71,4 +95,3 @@ if __name__ == '__main__':
             jsp.stats.print_summary()
         else:
             jsp.stats.print_benchmark_summary()
-

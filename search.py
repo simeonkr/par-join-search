@@ -19,7 +19,7 @@ from config import I_REWRITE, I_UNFLATTEN, \
 
 class JoinSearchProblem:
 
-    def __init__(self, lp, rules, invars, initial_subst = None, pars = None, typeOfSearch="pre", init_terms=[]):
+    def __init__(self, lp, rules, invars, initial_subst = None, pars = None, typeOfSearch="pre"):
         self.lp = lp
         self.init_term = lp.get_state_term(lp.get_num_states() - 1)
         if initial_subst:
@@ -39,7 +39,6 @@ class JoinSearchProblem:
         self.benchmark_sequence = []
         self.notDeep = set()
         self.iterations = 10 if typeOfSearch in {"pre", "aux_pre"} else 0
-        self.init_terms = [self.init_term] if init_terms in [[], None] else init_terms
 
     def get_initial_state(self):
         return State(flatten(self.init_term), 0, None)
@@ -164,11 +163,11 @@ class JoinSearchProblem:
         else:
             self.alt = None
 
-    def search(self):
+    def search(self, init_terms=[]):
 
         # NOTE used for search when a "second" aux is needed.
         #self.init_term = flatten(self.init_term.apply_subst_multi(self.lp.get_full_state_subst(), 1))
-
+        self.init_terms = [] if init_terms in [[], None] else init_terms
         self.preprocess_initial_state()
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
@@ -178,7 +177,7 @@ class JoinSearchProblem:
             # Multi-queue approach
 
             # Tries some guesses before starting the actual search.
-            startTerms = generateStartTerms(self.lp, self.solver, self.invars)
+            startTerms = self.init_terms#generateStartTerms(self.lp, self.solver, self.invars)
 
             queues = []
             shallow_state_vars = []

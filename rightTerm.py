@@ -119,90 +119,6 @@ def TOOmanyHELP(term, rights):
 def TOOmany(term, rights):
     return any([y > THRESHOLD for y in dict(TOOmanyHELP(term, rights)).values()])
 
-
-#infinity = 10000000
-#NOTE here the depth is sometimes counted wrong because of one term being contained in another!
-#So a thing TODO change so it does all right things at the same time.
-"Returns how deep each right SV is in term. 1000000000 if not in term"
-"""def depthOfSub(term, rights):
-    if type(term) in {Const, Var}:
-        if term in rights:
-            d = {right : infinity for right in rights if right != term}
-            d[term] = 0
-            return d
-        else:
-            return {right : infinity for right in rights}
-    d = {}
-
-    for subterm in rights:
-        if term == subterm or (type(subterm) == Term and subterm.op == term.op and term.op in assoc_ops and all([(t in term.terms) for t in subterm.terms])):
-            d[subterm] = 0
-        else:
-
-            temp = min([depthOfSub(sub, rights)[subterm] for sub in term.terms])
-            d[subterm] = infinity if temp == infinity else 1 + temp
-    return d"""
-
-"""Unused and unimplemented function (for now).
-Should return lst so that if x in y, then x only occurs before y in the lst
-(or the opposite, doesn't really matter)."""
-"""def dependencySort(lst):
-    return lst
-    l = []
-    count = 0
-    for x in lst:
-        pos = count
-        for y in l:
-            if x in y:
-                pass
-            elif y in x:
-                pass
-            else:
-                pass
-        l.insert(x)
-        count += 1
-    return l"""
-
-"""Returns only the elements from generateStartTermsRecursive
-that have the right subterms at a higher level."""
-"""def outermost(ret, rights):
-    returned = list(ret)
-    keepers = []
-    R = list(rights)
-    R.reverse()
-    for right in R[len(R)-2 : len(R)-1]:#range(len(rights), -1, -1):
-        mindepth = infinity
-        for r,depth in [(r, depthOfSub(r, rights)[right]) for r in returned]:#filter(lambda x : x[0] != -1, [(r, depthOfSub(r, right)) for r in returned]):
-            if depth < mindepth:
-                mindepth = depth
-                keepers = [r]
-            elif depth == mindepth:
-                keepers.append(r)
-    return keepers"""
-
-"""def getOccurences(term, rights, inf=False):
-    return dict(filter(lambda x : inf or x[1] < infinity, [(right, depthOfSub(term, rights)[right]) for right in rights]))"""
-
-"""def filterReturned(terms, rights):
-    out = set(terms)
-    R = list(rights)
-    R.reverse()
-    #R = {R[0]} #NOTE /TODO ???!?!??!
-    depth = {term: getOccurences(term, rights) for term in terms}
-    for right in R:
-        mindepth = infinity
-        the = set()
-        for term in terms:
-            if right in depth[term]:
-                if depth[term][right] < mindepth:
-                    the = {term}
-                    mindepth = depth[term][right]
-                elif depth[term][right] == mindepth:
-                    the = the.union({term})
-            else:
-                the = the.union({term})
-        out = out.intersection(the)
-    return out"""
 # =====================================================================
 # generateStartTerms:
 
@@ -248,7 +164,7 @@ def highDepthRight(solver, rights, init_term, ret, lastState):
 
 #TODO explain
 def generateStartTerms(lp, solver, invars):
-    #STR = "IC(((s2+a0)>=IC(((a0+0)>=0),(a0+0),0)),s3,(s1+IC(((a0+0)>=0),0,(0+1))))"
+
     init_term = flatten(lp.get_state_term(lp.get_num_states() - 1))
 
     #NOTE 1 unfold for problem like counting peaks
@@ -257,13 +173,28 @@ def generateStartTerms(lp, solver, invars):
 
     lastState = Var("SV", "s", lp.get_num_states())
 
+    # Returns a dictionary that maps right state variables to the correspoding "right"
+    # versions of the term.
+    # For example:
+    # 0; s1 = s1 + a0
+    # -100; s2 = max(s2, s1+a0)
+    # Then the output is {s1 : 0+a0, s2 : max(-100, 0+a0)}
     rights = rightAll(lp)
+
+    # Calls recursive helper.
     ret = generateStartTermsRecursive(init_term, init_term, solver, list(rights.keys()))
-    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}# or x.__str__() == STR]
-    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}# or x.__str__() == STR]
-    ret = highDepthRight(solver, rights, init_term,  ret, lastState)
-    ret = {removeDup(solver, rights, x, invars, lastState) for x in ret}.difference({None})
+
+    # Filters the term to be only the ones that are equivalent to the original term of the program.
+    ret = {x for x in ret if equivalent(solver, rights, init_term, x)}
+
+    # A special case thing that ensures that high--depth state variables are delat with
+    # in a particault way. TODO better descirption.
+    ret = highDepthRight(solver, rights, init_term, ret, lastState)
+
+    # Removes terms with two many 
     ret = {term for term in ret if not TOOmany(term, rights)}
+    # Removes repeats
+    ret = {removeDup(solver, rights, x, invars, lastState) for x in ret}.difference({None})
 
     print("init:", init_term)
     print("### Final output : ")
@@ -282,32 +213,6 @@ def constantOnly(term):
     if type(term) == Var:
         return term.vclass != "SV"
     return all([constantOnly(subterm) for subterm in term.terms])
-
-# Returns a new term: same as the old one, but with items appended to its subterms.
-#NOTE unused
-"""def termAppendReturn(term, items):
-    assert(type(term) == Term)
-    term = term.__deepcopy__()
-    for x in items:
-        term.terms.append(x)
-    return term"""
-
-# Returns a new term: same as the old one, but with subs removed from its subterms.
-#NOTE unused
-"""def removeTheseReturn(term, subs):
-    new_term = term.__deepcopy__()
-    for sub in subs:
-        new_term.terms.remove(sub)
-    return new_term"""
-
-"""def checker(terms):
-    def checkit(term):
-        if type(term) == Const:
-            assert(term.type == type(term.value))
-            assert(term.type != Const)
-        if type(term) == Term:
-            [checkit(subterm) for subterm in term.terms]
-    [checkit(term) for term in terms]"""
 
 return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else term.get_ret_type()
 
