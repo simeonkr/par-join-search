@@ -37,7 +37,6 @@ class JoinSearchProblem:
         self.hits = 0
         self.rule_choice_record = []
         self.benchmark_sequence = []
-        self.notDeep = set()
 
     def get_initial_state(self):
         return State(flatten(self.init_term), 0, None)
@@ -104,45 +103,30 @@ class JoinSearchProblem:
             print(state.rule_num)
             input('Press Enter to continue...')
 
-    # TODO better resuability than current situation
-    def correct_structure_preprocess(self, init_term, succ_term, notDeep):
+    #TODO comment
+    def correct_structure(self, succ_term, notDeep):
         if len(notDeep) == 0: #I_REWRITE or
             return True
-        if succ_term.op == init_term.op:
+        if succ_term.op == self.init_term.op:
             if notDeep.intersection(set(succ_term.terms)) != notDeep:
-                if all(type(x) == Const for x in self.notDeep.difference(set(succ_term.terms))):
+                if all(type(x) == Const for x in notDeep.difference(set(succ_term.terms))):
                     return True
                 return False
         else:
             return False
         return True
 
-    def shallow_state_vars_no_preprocess(self, init_term):
+    # TODO comment
+    def get_shalow_state_vars(self, init_term=None):
+        init_term = self.init_term if init_term is None else init_term
         notDeep = set()
         for subterm in flatten(init_term).terms:
             if type(subterm) == Var and subterm.vclass in {"SV", "RSV"}:
                 notDeep = notDeep.union({subterm.__deepcopy__()})
         return notDeep
 
-    def correct_structure_no_preprocess(self, succ_term):
-        if len(self.notDeep) == 0: #I_REWRITE or
-            return True
-        if succ_term.op == self.init_term.op:
-            if self.notDeep.intersection(set(succ_term.terms)) != self.notDeep:
-                if all(type(x) == Const for x in self.notDeep.difference(set(succ_term.terms))):
-                    return True
-                return False
-        else:
-            return False
-        return True
-
-    def shallow_state_vars_preprocess(self):
-        self.notDeep = set()
-        for subterm in flatten(self.init_term).terms:
-            if type(subterm) == Var and subterm.vclass == "SV":
-                self.notDeep = self.notDeep.union({subterm.__deepcopy__()})
-
-        # In addition this
+    # TODO comment
+    def right_SV_for_no_preprocess(self, notDeep):
         from rightTerm import right
 
         righty = flatten(right(self.lp, self.init_term))
@@ -154,10 +138,10 @@ class JoinSearchProblem:
             s_last = Var("RSV", "s", last, self.lp.get_state_init(last-1))
 
             # NOTE OLD WAY
-            self.notDeep = self.notDeep.union(set(righty.terms))
+            notDeep = notDeep.union(set(righty.terms))
 
             #NOTE NEW WAY
-            #self.notDeep = self.notDeep.union({s_last})
+            #notDeep = notDeep.union({s_last})
             #self.alt = self.init_term.__deepcopy__()
             #self.alt.terms.append(s_last)
 
@@ -170,13 +154,10 @@ class JoinSearchProblem:
         # TODO modify code so this doesn't have to be commented/uncommented
         # manually for the given probl.
         #self.init_term = flatten(self.init_term.apply_subst_multi(self.lp.get_full_state_subst(), 1))
-        startTerms = set() if init_terms is None else init_terms
+
+
         # Tries some guesses before starting the actual search.
-        #startTerms = generateStartTerms(self.lp, self.solver, self.invars)
-        self.shallow_state_vars_preprocess()
-        open_set = PriorityQueue()
-        init_state = self.get_initial_state()
-        seen = {}
+        startTerms = set() if init_terms is None else init_terms
 
         if len(startTerms) > 0:
 
@@ -191,30 +172,39 @@ class JoinSearchProblem:
                 open_set = PriorityQueue()
                 open_set.put((state.cost + self.strategy.get_heuristic(state), state))
                 queues.append((open_set, seen))
-                shallow_state_vars.append(self.shallow_state_vars_no_preprocess(init_term))
+                shallow_state_vars.append(self.get_shalow_state_vars(init_term))
 
             count = 0
             while count < bound or bound < 0:
                 count += 1
                 for init_term, (open_set, seen), notDeep in zip(startTerms, queues, shallow_state_vars):
                     if not open_set.empty():
-                        join = self.next_preprocess(open_set, seen, init_term, notDeep)
+                        join = self.next_iteration(open_set, seen, notDeep)
                         if join is not None:
                             return join
+
+        notDeep = self.get_shalow_state_vars()
+
+        self.right_SV_for_no_preprocess(notDeep)
+        init_state = self.get_initial_state()
         init_state = init_state if self.alt is None else State(self.alt,0)
+
         open_set = PriorityQueue()
         open_set.put((init_state.cost + self.strategy.get_heuristic(init_state), init_state))
         seen = {init_state : init_state.cost}
+
+        # Necessary?
         self.init_term = self.lp.get_state_term(self.lp.get_num_states() - 1)
 
         t1=time()
         while not open_set.empty():
-            join = self.next_no_preprocess(open_set, seen)
+            join = self.next_iteration(open_set, seen, notDeep)
             if join is not None:
                 return join
         return None
 
-    def next_no_preprocess(self, open_set, seen):
+    # TODO comment
+    def next_iteration(self, open_set, seen, notDeep):
         cost, state = open_set.get()
         if state in seen and seen[state] < cost:
             return None
@@ -230,8 +220,8 @@ class JoinSearchProblem:
         for pred in [state] + state.get_predecessors():
             vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
                 ['%3s' % str(cost) for cost in pred.cost_breakdown])))
-        if R_CHECK:
-            self.rewrite_check(state)
+        #if R_CHECK:
+        #    self.rewrite_check(state)
         if self.benchmark_sequence: # benchmark mode
             if str(state.term) in self.benchmark_sequence:
                 t2=time()
@@ -246,55 +236,13 @@ class JoinSearchProblem:
             if outcome:
                 self.stats.log_state(state)
                 return outcome
-        for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.correct_structure_no_preprocess(succ.term)], I_REWRITE,
-                                      'select a rewrite of %s:' % state):
-
+        for i,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.correct_structure(succ.term, notDeep)],
+                                                                            I_REWRITE, 'select a rewrite of %s:' % state):
             succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
             if not succ_state in seen or succ_metric < seen[succ_state]:
                 seen[succ_state] = succ_metric
                 open_set.put((succ_metric, succ_state))
             self.rule_choice_record.append(i)
-        return None
-
-    def next_preprocess(self, open_set, seen, init_term, notDeep):
-        cost, state = open_set.get()
-        if state in seen and seen[state] < cost:
-            return None
-        seen[state] = -1000000000000000
-
-        self.state_count += 1
-        self.strategy.state_visit(state)
-        self.stats.log_state(state)
-        vprint(P_STATES, "State", "[%d, %d]:" %
-               (self.state_count, self.hits), state)
-        vprint(P_COSTS, 'State costs: ', ', '.join(
-            [str(cost) for cost in state.cost_breakdown]))
-        for pred in [state] + state.get_predecessors():
-            vprint(P_STATE_PATH, '^%-50s %s' % (pred.term, ', '.join(
-                ['%3s' % str(cost) for cost in pred.cost_breakdown])))
-        if R_CHECK and False:
-            self.rewrite_check(state)
-        if self.benchmark_sequence: # benchmark mode
-            if str(state.term) in self.benchmark_sequence:
-                t2=time()
-                vprint(True, "### Milestone:", self.state_count, ". ", state, " ", round(t2-t1,2), " secs ", "###")
-                if self.benchmark_sequence[-1] == str(state.term):
-                    return None
-                self.benchmark_sequence.remove(str(state.term))
-                self.hits += 1 # variable has different meaning in this case
-                t1 = time()
-        else:
-            outcome = self.outcome(state)
-            if outcome:
-                self.stats.log_state(state)
-                return outcome
-            for i,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.correct_structure_preprocess(init_term, succ.term, notDeep)],
-                                                                                I_REWRITE, 'select a rewrite of %s:' % state):
-                succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
-                if not succ_state in seen or succ_metric < seen[succ_state]:
-                    seen[succ_state] = succ_metric
-                    open_set.put((succ_metric, succ_state))
-                self.rule_choice_record.append(i)
         return None
     '''
     def verify(self, rule_sequence):
