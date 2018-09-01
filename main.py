@@ -4,7 +4,7 @@ from rightTerm import generateStartTerms
 
 from defns import *
 from config import P_STATS
-from parserr import parse
+from parser import parse
 from search import JoinSearchProblem
 
 
@@ -51,12 +51,13 @@ if __name__ == '__main__':
 
         # Search with better guess terms.
         if not threads:
-            join = jsp.search(init_terms=generateStartTerms(jsp.lp, jsp.solver, jsp.invars))
+            join = jsp.search(init_terms=generateStartTerms(jsp.lp, jsp.solver, jsp.invars),bound=10)
         else:
+            # Temporary parallel implementation, to be actual implemented in
+            # parallel soon.
             terms = generateStartTerms(jsp.lp, jsp.solver, jsp.invars)
             joins = {}
 
-            #TODO threads
             for term in terms:
                 joins[term] = jsp.search(init_terms=[term])
 
