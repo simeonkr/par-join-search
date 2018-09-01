@@ -103,6 +103,9 @@ class Const:
     def negate(self):
         return Const(False) if self.value == True else Const(True)
 
+    def get_ret_type(self):
+        return self.type
+
     '''
     def minus(self):
         return Const(-self.value);
@@ -222,6 +225,9 @@ class Var(Const):
     def negate(self):
         return Term('~', [self.__deepcopy__()])
 
+    def get_ret_type(self):
+        return self.type
+
     '''
     def negate(self):
         return Term('~', [self.__deepcopy__()])
@@ -234,11 +240,11 @@ class Var(Const):
     '''
 
 
-ops = ["max", "min", "+", "*", "-", "&", "|", "IC", "BC", "==", "~", "~=", ">", ">="]
+ops = ["max", "min", "+", "*", "-", "&", "|", "IC", "BC", "==", "~", "~=", ">", ">=", "!="]
 unary_ops = ['~', '-']
-infix_ops = ['+', '*', '&', '|', '==', '~=', '>', '>=']
+infix_ops = ['+', '*', '&', '|', '==', '~=', '>', '>=', "!="]
 assoc_ops = ['+', '*', '&', '|', 'max', 'min']
-comm_ops = ['+', '*', '&', '|', '==', '~=', 'max', 'min']
+comm_ops = ['+', '*', '&', '|', '==', '~=', 'max', 'min', '!=']
 
 
 class TermType():
@@ -271,6 +277,7 @@ term_types['~'] = TermType([bool], bool, False)
 term_types['BC'] = TermType([bool, bool, bool], bool, False)
 term_types['IC'] = TermType([bool, int, int], int, False)
 term_types['=='] = TermType([int, int], bool, False)
+term_types['!='] = TermType([int, int], bool, False)
 
 class Term(Const):
 

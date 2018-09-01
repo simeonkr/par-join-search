@@ -7,27 +7,11 @@ from collections import Counter
 
 import itertools
 
-# =====================================================================
-# Helper functions that can be moved to util.py or deleted later.
-# Also some variables declared for testing.
-# =====================================================================
-def loopthrough(s):
-    i = 0
-    for x in s:
-        yield i,x
-        i += 1
 def printall(l):
     count = 1
     for x in l:
         print(count.__str__() +  ". ", x)
         count += 1
-
-for i in range(1, 5):
-    exec("s" + str(i) + " = Var(\"SV\", \"s\"," +  str(i) + ", int)")
-for i in range(2):
-    exec("a" + str(i) + " = Var(\"IV\", \"a\"," +  str(i) + ", int)")
-Z = Const(0)
-O = Const(1)
 
 # =====================================================================
 # Helper functions for the function generateStartTerms.
@@ -38,7 +22,7 @@ def rightAll(lp):
     d = {}
     i = 1
     for term in lp.state_terms:
-        rsv = Var("RSV", "s", i, lp.get_state_init(i-1).type if type(lp.get_state_init(i-1)) != Term else lp.get_state_init(i-1).get_ret_type())
+        rsv = Var("RSV", "s", i, lp.get_state_init(i-1).get_ret_type())
         d[rsv] = right(lp, term)
         i += 1
     return d
@@ -46,7 +30,7 @@ def rightAll(lp):
 # NOTE done in loop class?
 #Returns the right-induced version of term, assuming it is in the lp.
 def right(lp, term):
-    if type(term) == Var and term.vclass == "SV":
+    """if type(term) == Var and term.vclass == "SV":
         i = term.index
         return lp.get_state_init(i-1)
     if type(term) in {Const, Var}:
@@ -54,7 +38,9 @@ def right(lp, term):
     returned = Term(term.op, [])
     for subterm in term.terms:
         returned.terms.append(right(lp, subterm))
-    return returned
+    return returned"""
+    #assert(term.apply_subst(lp.get_full_init_subst()) == returned)
+    return term.apply_subst(lp.get_full_init_subst())
 
 # For the given term/invariant, returns the same invariant but with all of its
 # state variables replaced with the RSV versions.
@@ -125,18 +111,6 @@ def TOOmany(term, rights):
 # Returns a set of potential start terms for the search algorithm to start from.
 # =====================================================================
 
-def stringDeclaration(term, rec=True):
-    if type(term) == Const:
-        return "Const(" + term.value.__str__() + ")"
-    if type(term) == Var:
-        type_of_term = "int" if term.type == int else bool
-        return "Var(" + term.vclass + ", " + term.name + "," + str(term.index) + ", " + type_of_term + ")"
-
-    if rec:
-        out = "Term(" + term.op + ", " + ", ".join([stringDeclaration(subterm, rec) for subterm in term.terms]) + ")"
-        return out
-    return "Term(" + term.op + ", " + str(term.terms) + ")"
-
 # TODO explain what this does
 def highDepthRight(solver, rights, init_term, ret, lastState):
 
@@ -191,7 +165,7 @@ def generateStartTerms(lp, solver, invars):
     # in a particault way. TODO better descirption.
     ret = highDepthRight(solver, rights, init_term, ret, lastState)
 
-    # Removes terms with two many 
+    # Removes terms with two many
     ret = {term for term in ret if not TOOmany(term, rights)}
     # Removes repeats
     ret = {removeDup(solver, rights, x, invars, lastState) for x in ret}.difference({None})
@@ -214,8 +188,6 @@ def constantOnly(term):
         return term.vclass != "SV"
     return all([constantOnly(subterm) for subterm in term.terms])
 
-return_type_of_term = lambda term: term.type if type(term) in {Var, Const} else term.get_ret_type()
-
 # =====================================================================
 
 # Looks for constant only terms (in this term and the recursively returned subterms)
@@ -231,8 +203,8 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
     if type(term) in {Var, Const}:
         #dummy = Var("SV", "s", 0, None)
         #print("A", term)
-        #print([ term ] + [ right_term for right_term in rights if term.type == return_type_of_term(right_term)  ])
-        return [ term ] + [ right_term for right_term in rights if term.type == return_type_of_term(right_term)  ]
+        #print([ term ] + [ right_term for right_term in rights if term.type == right_term.get_ret_type()  ])
+        return [ term ] + [ right_term for right_term in rights if term.get_ret_type() == right_term.get_ret_type()  ]
 
     old = 0
     if old:
@@ -264,7 +236,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
             for item in startTerms:
                 # removes some constant only terms from the term.
                 for cons in powerset(constants):
-                    for right in powerset([right for right in rights if return_type_of_term(right) == item.get_arg_type(0)]):
+                    for right in powerset([right for right in rights if right.get_ret_type() == item.get_arg_type(0)]):
                         #print("\t", list(cons) + list(right))
                         if len(constants) !=0 and len(cons) == 0 == len(right):
                             #print("\tbad", list(cons) + list(right))
@@ -314,7 +286,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
             startTerms.append(new_term)
 
         if constantOnly(term):
-            startTerms.extend([ right_term for right_term in rights if return_type_of_term(term) == return_type_of_term(right_term)  ])
+            startTerms.extend([ right_term for right_term in rights if term.get_ret_type() == right_term.get_ret_type()  ])
 
         return startTerms
 
@@ -323,7 +295,7 @@ def generateStartTermsRecursive(term, init_term, solver, rights):
 # =====================================================================
 
 
-#TODO
+#TODO descirption
 def induceRight(term, rights):
     if type(term) == Const:
         return term.__deepcopy__()

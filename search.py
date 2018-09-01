@@ -19,7 +19,7 @@ from config import I_REWRITE, I_UNFLATTEN, \
 
 class JoinSearchProblem:
 
-    def __init__(self, lp, rules, invars, initial_subst = None, pars = None, typeOfSearch="pre"):
+    def __init__(self, lp, rules, invars, initial_subst = None, pars = None):
         self.lp = lp
         self.init_term = lp.get_state_term(lp.get_num_states() - 1)
         if initial_subst:
@@ -38,7 +38,6 @@ class JoinSearchProblem:
         self.rule_choice_record = []
         self.benchmark_sequence = []
         self.notDeep = set()
-        self.iterations = 10 if typeOfSearch in {"pre", "aux_pre"} else 0
 
     def get_initial_state(self):
         return State(flatten(self.init_term), 0, None)
@@ -105,8 +104,8 @@ class JoinSearchProblem:
             print(state.rule_num)
             input('Press Enter to continue...')
 
-    # TODO better naming / resuability than good_guess v.s. good_guessA
-    def good_guessA(self, init_term, succ_term, notDeep):
+    # TODO better resuability than current situation
+    def correct_structure_preprocess(self, init_term, succ_term, notDeep):
         if len(notDeep) == 0: #I_REWRITE or
             return True
         if succ_term.op == init_term.op:
@@ -118,14 +117,14 @@ class JoinSearchProblem:
             return False
         return True
 
-    def preprocess_initial_stateA(self, init_term):
+    def shallow_state_vars_no_preprocess(self, init_term):
         notDeep = set()
         for subterm in flatten(init_term).terms:
             if type(subterm) == Var and subterm.vclass in {"SV", "RSV"}:
                 notDeep = notDeep.union({subterm.__deepcopy__()})
         return notDeep
 
-    def good_guess(self, succ_term):
+    def correct_structure_no_preprocess(self, succ_term):
         if len(self.notDeep) == 0: #I_REWRITE or
             return True
         if succ_term.op == self.init_term.op:
@@ -137,11 +136,13 @@ class JoinSearchProblem:
             return False
         return True
 
-    def preprocess_initial_state(self):
+    def shallow_state_vars_preprocess(self):
         self.notDeep = set()
         for subterm in flatten(self.init_term).terms:
             if type(subterm) == Var and subterm.vclass == "SV":
                 self.notDeep = self.notDeep.union({subterm.__deepcopy__()})
+
+        # In addition this
         from rightTerm import right
 
         righty = flatten(right(self.lp, self.init_term))
@@ -163,21 +164,23 @@ class JoinSearchProblem:
         else:
             self.alt = None
 
-    def search(self, init_terms=[]):
+    def search(self, init_terms=set(),bound=-1):
 
         # NOTE used for search when a "second" aux is needed.
+        # TODO modify code so this doesn't have to be commented/uncommented
+        # manually for the given probl.
         #self.init_term = flatten(self.init_term.apply_subst_multi(self.lp.get_full_state_subst(), 1))
-        self.init_terms = [] if init_terms in [[], None] else init_terms
-        self.preprocess_initial_state()
+        startTerms = set() if init_terms is None else init_terms
+        # Tries some guesses before starting the actual search.
+        #startTerms = generateStartTerms(self.lp, self.solver, self.invars)
+        self.shallow_state_vars_preprocess()
         open_set = PriorityQueue()
         init_state = self.get_initial_state()
         seen = {}
-        if self.iterations:
+
+        if len(startTerms) > 0:
 
             # Multi-queue approach
-
-            # Tries some guesses before starting the actual search.
-            startTerms = self.init_terms#generateStartTerms(self.lp, self.solver, self.invars)
 
             queues = []
             shallow_state_vars = []
@@ -188,14 +191,14 @@ class JoinSearchProblem:
                 open_set = PriorityQueue()
                 open_set.put((state.cost + self.strategy.get_heuristic(state), state))
                 queues.append((open_set, seen))
-                shallow_state_vars.append(self.preprocess_initial_stateA(init_term))
+                shallow_state_vars.append(self.shallow_state_vars_no_preprocess(init_term))
 
             count = 0
-            while count < self.iterations:
+            while count < bound or bound < 0:
                 count += 1
                 for init_term, (open_set, seen), notDeep in zip(startTerms, queues, shallow_state_vars):
                     if not open_set.empty():
-                        join = self.next_rights(open_set, seen, init_term, notDeep)
+                        join = self.next_preprocess(open_set, seen, init_term, notDeep)
                         if join is not None:
                             return join
         init_state = init_state if self.alt is None else State(self.alt,0)
@@ -206,12 +209,12 @@ class JoinSearchProblem:
 
         t1=time()
         while not open_set.empty():
-            join = self.next_orig(open_set, seen)
+            join = self.next_no_preprocess(open_set, seen)
             if join is not None:
                 return join
         return None
 
-    def next_orig(self, open_set, seen):
+    def next_no_preprocess(self, open_set, seen):
         cost, state = open_set.get()
         if state in seen and seen[state] < cost:
             return None
@@ -243,7 +246,7 @@ class JoinSearchProblem:
             if outcome:
                 self.stats.log_state(state)
                 return outcome
-        for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guess(succ.term)], I_REWRITE,
+        for i, succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.correct_structure_no_preprocess(succ.term)], I_REWRITE,
                                       'select a rewrite of %s:' % state):
 
             succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
@@ -253,7 +256,7 @@ class JoinSearchProblem:
             self.rule_choice_record.append(i)
         return None
 
-    def next_rights(self, open_set, seen, init_term, notDeep):
+    def next_preprocess(self, open_set, seen, init_term, notDeep):
         cost, state = open_set.get()
         if state in seen and seen[state] < cost:
             return None
@@ -285,7 +288,7 @@ class JoinSearchProblem:
             if outcome:
                 self.stats.log_state(state)
                 return outcome
-            for i,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.good_guessA(init_term, succ.term, notDeep)],
+            for i,succ_state in loopthru([succ for succ in list(set(self.get_successors(state))) if self.correct_structure_preprocess(init_term, succ.term, notDeep)],
                                                                                 I_REWRITE, 'select a rewrite of %s:' % state):
                 succ_metric = succ_state.cost + self.strategy.get_heuristic(succ_state)
                 if not succ_state in seen or succ_metric < seen[succ_state]:

@@ -50,7 +50,8 @@ def _gcjut_rec(loop, t, conj_existing_states=False):
             l.state_init.append(t)
             l.state_terms.append(si)
             vprint(P_JOIN_GEN, "Join: got join:", Join(l, sRi))
-            #return [Join(loop, t), Join(l, sRi)]#, Join(l2, sRi)]
+            # TODO still a manual turn off/on.
+            return [Join(loop, t), Join(l, sRi)]#, Join(l2, sRi)]
         return [Join(loop, t)]
 
     out = []
