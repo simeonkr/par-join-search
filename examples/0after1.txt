@@ -1,0 +1,4 @@
+False; (s1|a0)
+False; (s2|(s1&~(a0)))
+
+bool_rules

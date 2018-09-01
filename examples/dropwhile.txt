@@ -1,0 +1,5 @@
+0; (s1+1)
+True; IC((a0&s2),0,s1)
+0; IC((a0&s2),(s1+1),s3)
+
+bool_rules

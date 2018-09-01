@@ -1,0 +1,6 @@
+0; a0
+True; (s2&(a0>=s1))
+
+bool_rules
+
+(a0>=0)
